@@ -1,0 +1,13 @@
+*.out
+
+*.exe
+*.test
+*.log
+
+BlockChainSimulator
+
+/vendor/
+/*.mod
+/*.sum
+
+draft*
