@@ -26,6 +26,11 @@ type Logger struct {
 	lock sync.Mutex
 }
 
+// init the default logger in case the user forgets to init it
+func init() {
+	LoggerInstance, _ = NewLogger("", INFO, "", true)
+}
+
 var LoggerInstance *Logger
 
 // Craete a new logger instance
