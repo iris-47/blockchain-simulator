@@ -3,10 +3,10 @@ package node
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
-	"BlockChainSimulator/node/msgHandler"
-	"BlockChainSimulator/node/msgHandler/msgHandlerInterface"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
+	"BlockChainSimulator/node/runningMod"
+	"BlockChainSimulator/node/runningMod/runningModInterface"
 	"BlockChainSimulator/utils"
 	"context"
 	"os"
@@ -18,32 +18,29 @@ type Node struct {
 	Attr   *nodeattr.NodeAttr // the base attribute of the node
 	P2PMod *p2p.P2PMod        // the p2p network module
 
-	// message handler modules
-	ConsensusMod msgHandlerInterface.MsgHandlerMod // message handler related to consensus, for example, pbft, hotstuff, etc.
-	AuxiliaryMod msgHandlerInterface.MsgHandlerMod // message handler does not related to consensus, for example, read the Txs dataset, etc.
+	// running modules
+	RunningMods []runningModInterface.RunningMod
 }
 
-func NewNode(sid int, nid int, pcc *config.ChainConfig, consensusType msgHandler.ConsensusHandlerType, consensusAddonType string, auxiliaryType msgHandler.AuxiliaryHandlerType) (*Node, error) {
+func NewNode(sid int, nid int, pcc *config.ChainConfig, runningModTypes []string) (*Node, error) {
 	var err error
 	node := new(Node)
 	node.Attr = nodeattr.NewNodeAttr(sid, nid, pcc)
 	node.P2PMod = p2p.NewP2PMod(node.Attr.Ipaddr)
 
-	node.ConsensusMod, err = msgHandler.NewConsensusMod(consensusType, consensusAddonType, node.Attr, node.P2PMod)
-	if err != nil {
-		utils.LoggerInstance.Error("Error creating consensus module: %v", err)
-		return nil, err
-	}
-
-	node.AuxiliaryMod, err = msgHandler.NewAuxiliaryMod(auxiliaryType, node.Attr, node.P2PMod)
-	if err != nil {
-		utils.LoggerInstance.Error("Error creating auxiliary module: %v", err)
-		return nil, err
+	for _, runningModType := range runningModTypes {
+		runningMod := runningMod.NewRunningMod(runningModType, node.Attr, node.P2PMod)
+		if runningMod == nil {
+			utils.LoggerInstance.Error("Error creating running module: %v", runningModType)
+			return nil, err
+		}
+		node.RunningMods = append(node.RunningMods, runningMod)
 	}
 
 	// register the messgae process handlers to the p2p module
-	node.ConsensusMod.RegisterHandlers()
-	node.AuxiliaryMod.RegisterHandlers()
+	for _, runningMod := range node.RunningMods {
+		runningMod.RegisterHandlers()
+	}
 
 	return node, nil
 }
@@ -60,9 +57,9 @@ func (n *Node) Run() {
 	n.P2PMod.StartListen()
 
 	// start to run custom modules
-	// no more goroutine inside the MsgHandlerMod Run()
-	go n.ConsensusMod.Run()
-	go n.AuxiliaryMod.Run()
+	for _, runningMod := range n.RunningMods {
+		go runningMod.Run()
+	}
 
 	// ctrl+c to stop all the goroutines
 	sigChan := make(chan os.Signal, 1)

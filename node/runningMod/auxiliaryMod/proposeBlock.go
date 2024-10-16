@@ -1,4 +1,4 @@
-package auxiliaryhandler
+package auxiliaryMod
 
 // Q: there will be a lot of duplicated code, how to avoid it?
 

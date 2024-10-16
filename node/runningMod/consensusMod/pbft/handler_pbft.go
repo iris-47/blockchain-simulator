@@ -3,15 +3,16 @@ package pbft
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
-	"BlockChainSimulator/node/msgHandler/msgHandlerInterface"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
+	"BlockChainSimulator/node/runningMod/runningModInterface"
 	"BlockChainSimulator/utils"
+	"log"
 	"time"
 )
 
 // implement the ConsensusMod interface
-var _ msgHandlerInterface.MsgHandlerMod = &PbftCosensusMod{}
+var _ runningModInterface.RunningMod = &PbftCosensusMod{}
 
 type PbftCosensusMod struct {
 	// vars from the belonging node
@@ -32,8 +33,8 @@ type PbftCosensusMod struct {
 	addonMod PbftAddon // PbftAddon is an pointer-type interface
 }
 
-// Creates a new PbftCosensusMod with the given addonModType, err is not nil if the addonModType is not supported
-func NewPbftCosensusMod(addonModType string, attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) (msgHandlerInterface.MsgHandlerMod, error) {
+// Creates a new PbftCosensusMod with the config.ConsensusMethod, err is not nil if the config.ConsensusMethod is not supported
+func NewPbftCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
 	pbftMod := new(PbftCosensusMod)
 	pbftMod.nodeAttr = attr
 	pbftMod.p2pMod = p2p
@@ -45,13 +46,14 @@ func NewPbftCosensusMod(addonModType string, attr *nodeattr.NodeAttr, p2p *p2p.P
 	pbftMod.malicious_num = (pbftMod.pbft_num - 1) / 3
 	pbftMod.view = config.ViewNodeId
 
-	addonMod, err := NewPbftAddon(addonModType, attr)
+	addonMod, err := NewPbftAddon(config.ConsensusMethod, attr)
 	if err != nil {
-		return nil, err
+		utils.LoggerInstance.Error("Error creating pbft addon module: %v", err)
+		log.Panicf("Error creating pbft addon module: %v", err)
 	}
 	pbftMod.addonMod = addonMod
 
-	return pbftMod, nil
+	return pbftMod
 }
 
 // At present, only the view node will receive the Propose message

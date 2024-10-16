@@ -1,15 +1,17 @@
-package auxiliaryhandler
+package auxiliaryMod
 
 import (
 	"BlockChainSimulator/message"
-	"BlockChainSimulator/node/msgHandler/msgHandlerInterface"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
+	"BlockChainSimulator/node/runningMod/runningModInterface"
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
 	"math/big"
 	"time"
 )
+
+var _ runningModInterface.RunningMod = &sendTxTestMod{}
 
 // just for test use, this mod sends Txs every 3 seconds
 type sendTxTestMod struct {
@@ -20,7 +22,7 @@ type sendTxTestMod struct {
 }
 
 // just for test use, this mod sends Txs every 3 seconds
-func NewTestAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) msgHandlerInterface.MsgHandlerMod {
+func NewTestAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
 	sttm := new(sendTxTestMod)
 	sttm.nodeAttr = attr
 	sttm.p2pMod = p2p

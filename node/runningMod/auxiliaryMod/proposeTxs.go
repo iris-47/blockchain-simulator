@@ -1,17 +1,17 @@
-package auxiliaryhandler
+package auxiliaryMod
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
-	"BlockChainSimulator/node/msgHandler/msgHandlerInterface"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
+	"BlockChainSimulator/node/runningMod/runningModInterface"
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
 	"time"
 )
 
-var _ msgHandlerInterface.MsgHandlerMod = &ProposeTxsAuxiliaryMod{}
+var _ runningModInterface.RunningMod = &ProposeTxsAuxiliaryMod{}
 
 // this mod will receive the txs from client and propose them to the shard
 type ProposeTxsAuxiliaryMod struct {
@@ -22,7 +22,7 @@ type ProposeTxsAuxiliaryMod struct {
 }
 
 // this mod will receive the txs from client and propose them to the shard
-func NewProposeTxsAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) msgHandlerInterface.MsgHandlerMod {
+func NewProposeTxsAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
 	sam := new(ProposeTxsAuxiliaryMod)
 	sam.nodeAttr = attr
 	sam.p2pMod = p2p
@@ -56,7 +56,6 @@ func (sam *ProposeTxsAuxiliaryMod) Run() {
 			Content: utils.Encode(req),
 		}
 		sam.p2pMod.MsgHandlerMap[message.MsgPropose](&msg)
-
 	}
 }
 
