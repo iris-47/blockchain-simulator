@@ -18,11 +18,16 @@ type NodeAttr struct {
 
 // URGENT: fullfill this function
 func NewNodeAttr(sid int, nid int, pcc *config.ChainConfig) *NodeAttr {
-	return &NodeAttr{
-		Sid:    sid,
-		Nid:    nid,
-		Ipaddr: config.IPMap[sid][nid],
+	nodeAttr := new(NodeAttr)
+	nodeAttr.Sid = sid
+	nodeAttr.Nid = nid
+	nodeAttr.Ipaddr = config.IPMap[sid][nid]
+	if sid == config.ClientShard {
+		nodeAttr.Ipaddr = config.ClientAddr
+		return nodeAttr
 	}
+	// nodeAttr.CurChain = blockchain.NewBlockChain(pcc, nodeAttr.DB)
+	return nodeAttr
 }
 
 // the hash of sid, nid and ipaddr

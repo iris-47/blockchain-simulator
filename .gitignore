@@ -4,6 +4,8 @@
 *.test
 *.log
 
+*.sh
+
 BlockChainSimulator
 
 /vendor/

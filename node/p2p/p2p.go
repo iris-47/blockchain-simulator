@@ -33,6 +33,7 @@ func (p2p *P2PMod) RegisterHandler(msgType message.MessageType, handler message.
 
 // start listening on the p2p's listen address
 func (p2p *P2PMod) StartListen() {
+	utils.LoggerInstance.Info("Start listening on %v\n", p2p.listenAddr)
 	ln, err := net.Listen("tcp", p2p.listenAddr)
 	if err != nil {
 		utils.LoggerInstance.Error("Error listening: %v", err)
@@ -72,7 +73,7 @@ func (p2p *P2PMod) handleConnection(conn net.Conn) {
 
 		msg := new(message.Message)
 		message.JsonDecode(content, msg)
-		utils.LoggerInstance.Debug("Received message len %d: %v\n", len(content), msg)
+		utils.LoggerInstance.Debug("Received msg of type %v len %v", msg.MsgType, len(content))
 
 		if handler, ok := p2p.MsgHandlerMap[msg.MsgType]; ok {
 			handler(msg) // Q: why use/not use go here?

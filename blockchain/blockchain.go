@@ -101,7 +101,7 @@ func (bc *BlockChain) AddGenesisBlock(b *structs.Block) {
 }
 
 func (bc *BlockChain) AddBlock(b *structs.Block) {
-	if b.Header.Miner != bc.ChainConfig.NodeID && config.Transaction_Method != "UTXO" {
+	if b.Header.Miner != bc.ChainConfig.NodeID && config.TxType != "UTXO" {
 		bc.UpdateStatusTrie(b.Transactions)
 	}
 	bc.CurrentBlock = b

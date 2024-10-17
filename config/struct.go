@@ -12,16 +12,11 @@ type Args struct {
 	BlockSize int // how many Txs per block
 
 	// <-- Running Config Related -->
-	IsClient      bool   // whether this node is a client
-	IsDistribute  bool   // whether the environment is distribute or local
-	CommitteeType string // choice Committee Method, for example, CShard
-	TxType        string // choice of TxType, for example, UTXO
-	// UseUTXO      bool   // use utxo model or not
-	LogLevel string // Set the log level of [NONE, INFO, DBG]
-
-	// <-- Generate batch processing file-->
-	GenBat       bool // generation bat for the whole system
-	GenServerBat bool // generation bat for a server
+	IsClient        bool   // whether this node is a client
+	IsDistribute    bool   // whether the environment is distribute or local
+	ConsensusMethod string // choice fo consensus Method, for example, CShard
+	TxType          string // choice of TxType, for example, UTXO
+	LogLevel        string // Set the log level of [DEBUG, INFO, WARN, ERROR]
 }
 
 // Configuration for a Blockchain

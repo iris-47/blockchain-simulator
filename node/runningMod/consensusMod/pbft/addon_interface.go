@@ -15,13 +15,15 @@ type PbftAddon interface {
 }
 
 const (
-	SimpleAddon = "simple"
+	TestAddon   = "Test"
+	SimpleAddon = "Simple"
 	// add more addon type here
 )
 
 var addonRegistry = make(map[string]func(attr *nodeattr.NodeAttr) PbftAddon)
 
 func init() {
+	addonRegistry[TestAddon] = NewSimplePbftCosensusAddon
 	addonRegistry[SimpleAddon] = NewSimplePbftCosensusAddon
 	// init more addon type here
 }

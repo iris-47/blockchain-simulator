@@ -11,8 +11,8 @@ import (
 
 // Running mod relates to consensus
 const (
-	PBFT     string = "pbft"
-	HotStuff string = "hotstuff"
+	PBFTMod     string = "pbft"
+	HotStuffMod string = "hotstuff"
 	// add more consensus type here
 )
 
@@ -21,7 +21,8 @@ const (
 	TestMod       string = "test"
 	ProposeTxsMod string = "ProposeTxs"
 
-	MeasureMod string = "measure" // used by the client to measure the performance of the system
+	StartSystemMod string = "start"   // used by the client to start the system
+	MeasureMod     string = "measure" // used by the client to measure the performance of the system
 )
 
 var runnningModRegistry = make(map[string]func(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod)
@@ -30,11 +31,12 @@ func init() {
 	// register more msgHandler type here
 
 	// Consensus Running Mod
-	runnningModRegistry[PBFT] = pbft.NewPbftCosensusMod
+	runnningModRegistry[PBFTMod] = pbft.NewPbftCosensusMod
 
 	// Auxiliary Running Mod
 	runnningModRegistry[TestMod] = auxiliaryMod.NewTestAuxiliaryMod
 	runnningModRegistry[ProposeTxsMod] = auxiliaryMod.NewProposeTxsAuxiliaryMod
+	runnningModRegistry[StartSystemMod] = auxiliaryMod.NewStartSystemAuxiliaryMod
 }
 
 // invoke by node.go to create a running mod

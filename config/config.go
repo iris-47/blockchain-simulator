@@ -1,6 +1,9 @@
 package config
 
-import "math/big"
+import (
+	"math/big"
+	"strconv"
+)
 
 // config of the client
 var (
@@ -11,14 +14,13 @@ var (
 
 // config of the blockchain
 var (
-	Transaction_Method = string("")
-	BlockSize          = 500
-	ConsensusInterval  = 100                                                                         // (ms) the interval of the each round of consensus
-	Init_Balance, _    = new(big.Int).SetString("100000000000000000000000000000000000000000000", 10) // A new coinbase Tx
-	IPMap              = make(map[int]map[int]string)                                                // IPmap_nodeTable[shardID][nodeID] = "IP:Port"
-	MeasureMethod      = []string{"avgTPS", "TCL", "TxNum"}                                          // the client measure method
-	ConsensusMethod    = string("")                                                                  // the method of the consensus
-	// Method          = string("")                                                                  // set by the command line
+	TxType            = string("")
+	BlockSize         = 500
+	ConsensusInterval = 100                                                                         // (ms) the interval of the each round of consensus
+	Init_Balance, _   = new(big.Int).SetString("100000000000000000000000000000000000000000000", 10) // A new coinbase Tx
+	IPMap             = make(map[int]map[int]string)                                                // IPmap_nodeTable[shardID][nodeID] = "IP:Port"
+	MeasureMethod     = []string{"avgTPS", "TCL", "TxNum"}                                          // the client measure method, must muanlly set at here
+	ConsensusMethod   = string("")                                                                  // the method of the consensus, set through the command line
 )
 
 // config of the running environment
@@ -33,7 +35,8 @@ var (
 	StoragePath = "./record"                                                      // the path to store the blockchain data
 	ResultPath  = "./result/"                                                     // measurement data result output path
 	LogPath     = "./log"                                                         // log output path
-	CleintAddr  = "127.0.0.1:23333"                                               // client ip address
+	StartPort   = 28800                                                           // the start port of the IPnodeTable, in local environment
+	ClientAddr  = "127.0.0.1:23333"                                               // client ip address
 	FileInput   = `/home/pjj/Desktop/BlockChain/dataset/0to99999_Transaction.csv` // the BlockTransaction data path
 
 	ServerAddrs = []string{ // for distribute experiment
@@ -59,3 +62,49 @@ var (
 		"192.168.0.77", "192.168.0.78", "192.168.0.79", "192.168.0.80",
 	}
 )
+
+// // The command line arguments
+// type Args struct {
+// 	// <-- Blockchain Config Related -->
+// 	NodeID    int // id of this node, for example, 0
+// 	NodeNum   int // indicate how many nodes of each shard are deployed
+// 	ShardID   int // id of the shard to which this node belongs, for example, 0
+// 	ShardNum  int // indicate that how many shards are deployed
+// 	BlockSize int // how many Txs per block
+
+//		// <-- Running Config Related -->
+//		IsClient        bool   // whether this node is a client
+//		IsDistribute    bool   // whether the environment is distribute or local
+//		ConsensusMethod string // choice fo consensus Method, for example, CShard
+//		TxType          string // choice of TxType, for example, UTXO
+//		LogLevel string // Set the log level of [NONE, INFO, DBG]
+//	}
+//
+
+func InitConfig(args *Args) {
+	NodeNum = args.NodeNum
+	ShardNum = args.ShardNum
+	BlockSize = args.BlockSize
+	IsDistributed = args.IsDistribute
+	ConsensusMethod = args.ConsensusMethod
+	TxType = args.TxType
+	LogLevel = args.LogLevel
+
+	// init the IPMap
+	for i := 0; i < ShardNum; i++ {
+		if _, ok := IPMap[i]; !ok {
+			IPMap[i] = make(map[int]string)
+		}
+		for j := 0; j < NodeNum; j++ {
+			if !IsDistributed {
+				// local environment, assume no more than 100 nodes in a shard
+				IPMap[i][j] = "127.0.0.1:" + strconv.Itoa(StartPort+100*i+j)
+			} else {
+				// distributed environment, assume one physical machine hold a shard, more real environment is not affordable to us
+				IPMap[i][j] = ServerAddrs[i] + ":" + strconv.Itoa(StartPort+j)
+			}
+		}
+	}
+	IPMap[ClientShard] = make(map[int]string)
+	IPMap[ClientShard][0] = ClientAddr
+}

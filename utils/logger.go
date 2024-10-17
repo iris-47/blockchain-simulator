@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"BlockChainSimulator/config"
 	"fmt"
 	"io"
 	"log"
@@ -26,19 +27,28 @@ type Logger struct {
 	lock sync.Mutex
 }
 
-// init the default logger in case the user forgets to init it
-func init() {
-	LoggerInstance, _ = NewLogger("", INFO, "", true)
-}
-
+// must be created before using the logger
 var LoggerInstance *Logger
 
 // Craete a new logger instance
-func NewLogger(logFile string, level int, prefix string, toStdout bool) (*Logger, error) {
+func NewLogger(args *config.Args, level string, toStdout bool, toFile bool) (*Logger, error) {
 	var file io.Writer
 	var err error
 
-	if logFile == "" {
+	// check if the log path exists, if not, create it
+	if _, err := os.Stat(config.LogPath); os.IsNotExist(err) {
+		os.Mkdir(config.LogPath, os.ModePerm)
+	}
+
+	// set the prefix and log file name according to the args
+	prefix := fmt.Sprintf("[S%dN%d]", args.ShardID, args.NodeID)
+	logFile := fmt.Sprintf("%s/S%dN%d.log", config.LogPath, args.ShardID, args.NodeID)
+	if args.IsClient {
+		prefix = "[Client]"
+		logFile = fmt.Sprintf("%s/client.log", config.LogPath)
+	}
+
+	if !toFile {
 		file = os.Stdout
 	} else {
 		file, err = os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -51,7 +61,13 @@ func NewLogger(logFile string, level int, prefix string, toStdout bool) (*Logger
 	}
 
 	logger := log.New(file, "", log.Ltime)
-	return &Logger{logger: logger, level: level, prefix: prefix}, nil
+	return &Logger{logger: logger, level: str2Level(level), prefix: prefix}, nil
+}
+
+func (l *Logger) SetPrefix(prefix string) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.prefix = prefix
 }
 
 func (l *Logger) SetLevel(level int) {
@@ -69,6 +85,21 @@ func (l *Logger) getCallerInfo() string {
 	}
 	fileName := filepath.Base(file)
 	return fmt.Sprintf("%s:%d", fileName, line)
+}
+
+func str2Level(level string) int {
+	switch level {
+	case "DEBUG":
+		return DEBUG
+	case "INFO":
+		return INFO
+	case "WARN":
+		return WARN
+	case "ERROR":
+		return ERROR
+	default:
+		return INFO
+	}
 }
 
 func (l *Logger) log(level int, levelStr string, format string, v ...interface{}) {

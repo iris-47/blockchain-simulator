@@ -11,6 +11,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -46,10 +47,11 @@ func NewNode(sid int, nid int, pcc *config.ChainConfig, runningModTypes []string
 }
 
 func (n *Node) Run() {
+	wg := sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
 	n.P2PMod.MsgHandlerMap[message.MsgStop] = func(msg *message.Message) {
-		utils.LoggerInstance.Info("Received stop message. Stopping the node...")
+		utils.LoggerInstance.Info("Received stop message...now close the running Mod")
 		cancel()
 	}
 
@@ -58,7 +60,8 @@ func (n *Node) Run() {
 
 	// start to run custom modules
 	for _, runningMod := range n.RunningMods {
-		go runningMod.Run()
+		wg.Add(1)
+		go runningMod.Run(ctx, &wg)
 	}
 
 	// ctrl+c to stop all the goroutines
@@ -66,9 +69,14 @@ func (n *Node) Run() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
-	case <-ctx.Done():
-		utils.LoggerInstance.Info("Node stopped") // invoke by other nodes, for example, the client
+	case <-ctx.Done(): // invoke by other nodes, for example, the client
+
 	case <-sigChan:
-		utils.LoggerInstance.Info("Received system interrupt. Shutting down the system...")
+		utils.LoggerInstance.Info("Node stopped by system interrupt...now close the running Mod")
+		cancel()
 	}
+
+	// wait for all the runningMods to stop
+	wg.Wait()
+	utils.LoggerInstance.Info("Node stopped...")
 }

@@ -7,7 +7,9 @@ import (
 	"BlockChainSimulator/node/p2p"
 	"BlockChainSimulator/node/runningMod/runningModInterface"
 	"BlockChainSimulator/utils"
+	"context"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -200,28 +202,46 @@ func (pbftmod *PbftCosensusMod) getNeighbours() []string {
 
 // Run starts the intra-shard consensus.
 // This function will work in the condition that the request is from other shards instead of the current shard
-func (pbftmod *PbftCosensusMod) Run() {
+func (pbftmod *PbftCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 	if pbftmod.nodeAttr.Nid != pbftmod.view {
-		utils.LoggerInstance.Info("This node is not the view node, do not need to run intra-shard consensus")
+		utils.LoggerInstance.Info("This node is not the view node, do not need to run intra-shard consensus Mod")
 		return
 	}
-	utils.LoggerInstance.Info("Start intra-shard consensus")
+
+	utils.LoggerInstance.Info("Start the intra-shard consensus Mod")
 	for {
-		// get the request from the request queue and broadcast the pre-prepare message
-		req := pbftmod.requestQueue.Dequeue()
-		// delay to mimic the network delay
-		// time.Sleep(time.Millisecond * time.Duration(config.NodeNum*config.BlockSize/125))
-		ppmsg := message.Message{
-			MsgType: message.MsgPropose,
-			Content: utils.Encode(req),
+		select {
+		case <-ctx.Done():
+			utils.LoggerInstance.Info("Stop the intra-shard consensus Mod")
+			return
+		default:
+			// get the request from the request queue and broadcast the pre-prepare message
+			req, err := pbftmod.requestQueue.Dequeue()
+			if err != nil {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
+			// delay to mimic the network delay
+			// time.Sleep(time.Millisecond * time.Duration(config.NodeNum*config.BlockSize/125))
+
+			ppmsg := message.Message{
+				MsgType: message.MsgPropose,
+				Content: utils.Encode(req),
+			}
+			pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(), ppmsg.JsonEncode())
+			utils.LoggerInstance.Info("Broadcast the propose message")
+
+			// wait for the consensus to be done
+			select {
+			case <-pbftmod.consensusDone:
+				// consensus interval, waits for other nodes to complete the consensus
+				time.Sleep(time.Millisecond * time.Duration(config.ConsensusInterval))
+			case <-ctx.Done():
+				utils.LoggerInstance.Info("Stop the intra-shard consensus Mod")
+				return
+			}
 		}
-		pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(), ppmsg.JsonEncode())
-		utils.LoggerInstance.Info("Broadcast the propose message")
-
-		// wait for the consensus to be done
-		<-pbftmod.consensusDone
-
-		// consensus interval, waits for other nodes to complete the consensus
-		time.Sleep(time.Millisecond * time.Duration(config.ConsensusInterval))
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"BlockChainSimulator/node/runningMod/runningModInterface"
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
+	"context"
+	"sync"
 	"time"
 )
 
@@ -37,25 +39,33 @@ func (sam *ProposeTxsAuxiliaryMod) RegisterHandlers() {
 }
 
 // get the txs from the txPool and propose them to the shard
-func (sam *ProposeTxsAuxiliaryMod) Run() {
+func (sam *ProposeTxsAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
-		txs := sam.txPool.WaitTxs()
-		if len(txs) < config.BlockSize {
-			utils.LoggerInstance.Error("No txs, something wrong")
-		}
+		select {
+		case <-ctx.Done():
+			utils.LoggerInstance.Info("Stop the ProposeTxsAuxiliaryMod")
+			return
+		default:
+			txs := sam.txPool.GetBatchofTxs()
+			if txs == nil {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
 
-		req := message.Request{
-			ReqType: message.ReqVerifyTxs,
-			Content: utils.Encode(txs),
-			ReqTime: time.Now(),
-		}
-		req.CalDigest()
+			req := message.Request{
+				ReqType: message.ReqVerifyTxs,
+				Content: utils.Encode(txs),
+				ReqTime: time.Now(),
+			}
+			req.CalDigest()
 
-		msg := message.Message{
-			MsgType: message.MsgPropose,
-			Content: utils.Encode(req),
+			msg := message.Message{
+				MsgType: message.MsgPropose,
+				Content: utils.Encode(req),
+			}
+			sam.p2pMod.MsgHandlerMap[message.MsgPropose](&msg)
 		}
-		sam.p2pMod.MsgHandlerMap[message.MsgPropose](&msg)
 	}
 }
 

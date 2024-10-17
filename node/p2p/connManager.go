@@ -26,7 +26,7 @@ func (conm *ConnMananger) getPool(addr string) *sync.Pool {
 			New: func() interface{} {
 				conn, err := net.Dial("tcp", addr)
 				if err != nil {
-					panic(fmt.Sprintf("Failed to create connection to %s: %v", addr, err))
+					panic(err)
 				}
 				return conn
 			},
