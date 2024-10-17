@@ -2,6 +2,7 @@
 package structs
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -73,12 +74,17 @@ func (txPool *TxPool) GetTxs(count int) []Transaction {
 
 // WaitTxs() returns the first `batchSize` transactions from the TxPool.
 // If insufficient transactions available, it will block until there are enough transactions.
-func (txPool *TxPool) WaitTxs() []Transaction {
+func (txPool *TxPool) WaitTxs(ctx context.Context) []Transaction {
 	txPool.lock.Lock()
 	defer txPool.lock.Unlock()
 
 	for len(txPool.Txs) < txPool.batchSize {
-		txPool.batchSizeEnough.Wait()
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			txPool.batchSizeEnough.Wait()
+		}
 	}
 
 	txs := txPool.Txs[:txPool.batchSize]
