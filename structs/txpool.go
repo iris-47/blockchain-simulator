@@ -2,7 +2,6 @@
 package structs
 
 import (
-	"context"
 	"sync"
 	"time"
 )
@@ -10,9 +9,8 @@ import (
 type TxPool struct {
 	Txs []Transaction
 
-	batchSize       int
-	lock            sync.Mutex
-	batchSizeEnough *sync.Cond
+	batchSize int
+	lock      sync.Mutex
 }
 
 func NewTxPool(batchSize int) *TxPool {
@@ -21,7 +19,6 @@ func NewTxPool(batchSize int) *TxPool {
 
 		batchSize: batchSize,
 	}
-	txPool.batchSizeEnough = sync.NewCond(&txPool.lock)
 	return txPool
 }
 
@@ -33,11 +30,6 @@ func (txPool *TxPool) AddTx(tx Transaction) {
 		tx.SetTime(time.Now())
 	}
 	txPool.Txs = append(txPool.Txs, tx)
-
-	// notify that there is enough transactions in the pool
-	if len(txPool.Txs) >= txPool.batchSize {
-		txPool.batchSizeEnough.Signal()
-	}
 }
 
 // AddTxs adds a list of transactions to last of the TxPool
@@ -49,11 +41,6 @@ func (txPool *TxPool) AddTxs(txs []Transaction) {
 			tx.SetTime(time.Now())
 		}
 		txPool.Txs = append(txPool.Txs, tx)
-	}
-
-	// notify that there is enough transactions in the pool
-	if len(txPool.Txs) >= txPool.batchSize {
-		txPool.batchSizeEnough.Signal()
 	}
 }
 
@@ -73,18 +60,13 @@ func (txPool *TxPool) GetTxs(count int) []Transaction {
 }
 
 // WaitTxs() returns the first `batchSize` transactions from the TxPool.
-// If insufficient transactions available, it will block until there are enough transactions.
-func (txPool *TxPool) WaitTxs(ctx context.Context) []Transaction {
+// If insufficient transactions available, it will return nil
+func (txPool *TxPool) GetBatchofTxs() []Transaction {
 	txPool.lock.Lock()
 	defer txPool.lock.Unlock()
 
-	for len(txPool.Txs) < txPool.batchSize {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			txPool.batchSizeEnough.Wait()
-		}
+	if len(txPool.Txs) < txPool.batchSize {
+		return nil
 	}
 
 	txs := txPool.Txs[:txPool.batchSize]
@@ -96,11 +78,4 @@ func (txPool *TxPool) Size() int {
 	txPool.lock.Lock()
 	defer txPool.lock.Unlock()
 	return len(txPool.Txs)
-}
-
-// Notify() is used to stop the waiting goroutine
-func (txPool *TxPool) Notify() {
-	txPool.lock.Lock()
-	defer txPool.lock.Unlock()
-	txPool.batchSizeEnough.Signal()
 }
