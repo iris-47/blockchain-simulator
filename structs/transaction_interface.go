@@ -11,6 +11,7 @@ import (
 type Address = string
 
 type Transaction interface {
+	Type() string
 	// <---Get value from Transaction--->
 	// returns the transaction ID, usually the same to Hash()
 	ID() []byte
@@ -30,3 +31,10 @@ type Transaction interface {
 	// <---Set value to Transaction--->
 	SetTime(time time.Time)
 }
+
+// TransactionType is the type of transaction
+var (
+	UTXOTransactionType            string = "UTXO"
+	AccountTransactionType         string = "Account"
+	ETHLikeContractTransactionType string = "ETHLikeContract"
+)

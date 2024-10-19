@@ -3,15 +3,21 @@ package structs
 import (
 	"BlockChainSimulator/utils"
 	"crypto/sha256"
+	"encoding/gob"
 	"math/big"
 )
 
 var _ State = &AccountState{}
 
+func init() {
+	gob.Register(&AccountState{})
+}
+
 type AccountState struct {
-	AcAddress Address
-	Nonce     int64
-	Balance   *big.Int
+	AcAddress     Address
+	Nonce         int64
+	Balance       *big.Int
+	BackupBalance *big.Int
 }
 
 func (as *AccountState) Hash() []byte {
@@ -41,4 +47,20 @@ func (as *AccountState) Deduct(amount *big.Int) bool {
 	}
 	as.Balance.Sub(as.Balance, amount)
 	return true
+}
+
+func (as *AccountState) GetKey() []byte {
+	return []byte(as.AcAddress)
+}
+
+func (as *AccountState) Update(tx Transaction) bool {
+	return true
+}
+
+func (as *AccountState) Commit() {
+	as.BackupBalance = as.Balance
+}
+
+func (as *AccountState) Rollback() {
+	as.Balance = as.BackupBalance
 }

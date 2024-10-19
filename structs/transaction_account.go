@@ -12,7 +12,7 @@ import (
 var _ Transaction = &AccountTransaction{}
 
 func init() {
-	gob.Register(AccountTransaction{}) // register the AccountTransaction struct for utils.Encode()
+	gob.Register(&AccountTransaction{}) // register the AccountTransaction struct for utils.Encode()
 }
 
 type AccountTransaction struct {
@@ -31,6 +31,10 @@ type AccountTransaction struct {
 	FinalRecipient Address
 
 	Siganature []byte // not implemented yet
+}
+
+func (tx *AccountTransaction) Type() string {
+	return AccountTransactionType
 }
 
 func (tx *AccountTransaction) ID() []byte {

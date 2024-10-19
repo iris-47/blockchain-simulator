@@ -32,7 +32,7 @@ var (
 	IsDistributed = false     // Running in local environment or not
 	ClientShard   = 0xfffffff // the shardID of the client
 
-	StoragePath = "./record"                                                      // the path to store the blockchain data
+	StoragePath = "./record/"                                                     // the path to store the blockchain data
 	ResultPath  = "./result/"                                                     // measurement data result output path
 	LogPath     = "./log"                                                         // log output path
 	StartPort   = 28800                                                           // the start port of the IPnodeTable, in local environment

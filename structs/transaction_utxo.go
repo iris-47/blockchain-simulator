@@ -43,6 +43,10 @@ type UTXOTransaction struct {
 	// CommitTime time.Time
 }
 
+func (tx *UTXOTransaction) Type() string {
+	return UTXOTransactionType
+}
+
 func (tx *UTXOTransaction) ID() []byte {
 	return tx.TxId
 }

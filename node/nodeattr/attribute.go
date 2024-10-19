@@ -4,8 +4,6 @@ import (
 	"BlockChainSimulator/blockchain"
 	"BlockChainSimulator/config"
 	"strconv"
-
-	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 type NodeAttr struct {
@@ -13,7 +11,6 @@ type NodeAttr struct {
 	Nid      int
 	Ipaddr   string
 	CurChain *blockchain.BlockChain
-	DB       ethdb.Database
 }
 
 // URGENT: fullfill this function
