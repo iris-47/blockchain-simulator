@@ -19,6 +19,7 @@ const (
 	MsgNodeReady // a node is ready to receive messages
 	MsgStop      // stop the node
 	MsgInject    // inject the Txs data(always from the client) to the system
+	MsgVerified  // send the verified requests back to the client
 
 	// PBFT
 	MsgPropose

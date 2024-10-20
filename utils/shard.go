@@ -1,8 +1,6 @@
-package blockchain
+package utils
 
-import (
-	"BlockChainSimulator/config"
-)
+import "BlockChainSimulator/config"
 
 func Addr2Shard(addr config.Address) int {
 	subaddr := addr[len(addr)-8:]

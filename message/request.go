@@ -20,10 +20,23 @@ const (
 
 // always indicate which kind of request a consensus is proposing
 type Request struct {
-	ReqType RequestType
-	Content []byte    // the request body, e.g., the block to be verified
-	ReqTime time.Time // the time when the request is created
-	Digest  [32]byte  // hash of the request
+	ShardId         int
+	ReqType         RequestType
+	Content         []byte    // the request body, e.g., the block to be verified
+	ReqTime         time.Time // the time when the request is created
+	ReqVerifiedTime time.Time // the time when the request is verified
+	Digest          [32]byte  // hash of the request
+}
+
+func NewRequest(shardId int, reqType RequestType, content []byte) *Request {
+	request := Request{
+		ShardId: shardId,
+		ReqType: reqType,
+		Content: content,
+		ReqTime: time.Now(),
+	}
+	request.CalDigest()
+	return &request
 }
 
 // fill the Digest field of the request

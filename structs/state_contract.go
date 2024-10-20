@@ -7,7 +7,7 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-var execTimeDelay = 50 // mimic the execution time of a transaction
+var execTimeDelay = 10 // mimic the execution time of a transaction
 
 var _ State = &ContractState{}
 
@@ -31,7 +31,7 @@ func (cs *ContractState) GetKey() []byte {
 // Run and verify the transaction
 func (cs *ContractState) Update(tx Transaction) bool {
 	// randomly delay the execution time of the transaction around execTimeDelay(ms)
-	delay := rand.Intn(100) + execTimeDelay
+	delay := rand.Intn(execTimeDelay*2) + execTimeDelay
 	time.Sleep(time.Duration(delay) * time.Millisecond)
 
 	return true

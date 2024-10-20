@@ -42,10 +42,10 @@ func NewLogger(args *config.Args, level string, toStdout bool, toFile bool) (*Lo
 
 	// set the prefix and log file name according to the args
 	prefix := fmt.Sprintf("[S%dN%d]", args.ShardID, args.NodeID)
-	logFile := fmt.Sprintf("%s/S%dN%d.log", config.LogPath, args.ShardID, args.NodeID)
+	logFile := fmt.Sprintf("%sS%dN%d.log", config.LogPath, args.ShardID, args.NodeID)
 	if args.IsClient {
 		prefix = "[Client]"
-		logFile = fmt.Sprintf("%s/client.log", config.LogPath)
+		logFile = fmt.Sprintf("%sclient.log", config.LogPath)
 	}
 
 	if !toFile {

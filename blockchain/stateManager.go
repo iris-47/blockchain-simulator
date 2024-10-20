@@ -54,7 +54,7 @@ func (stm *StateManager) UpdateStates(txs []structs.Transaction, stateRoot []byt
 			// update the state of the account
 		} else if tx.Type() == structs.ETHLikeContractTransactionType {
 			receiver := tx.To()[0]
-			if Addr2Shard(receiver) == stm.ChainConfig.ShardID {
+			if utils.Addr2Shard(receiver) == stm.ChainConfig.ShardID {
 				// update the state of the sender
 				var state *structs.ContractState
 				// if the state is not in the DirtyState, get the state from the trie
@@ -84,6 +84,10 @@ func (stm *StateManager) UpdateStates(txs []structs.Transaction, stateRoot []byt
 // Consensus Passed, Commit the states
 func (stm *StateManager) CommitStates(stateRoot []byte) []byte {
 	st, err := trie.New(trie.TrieID(common.BytesToHash(stateRoot)), stm.triedb)
+	if err != nil {
+		utils.LoggerInstance.Error("Failed to create the trie")
+		log.Panic(err)
+	}
 	for key := range stm.DirtyState {
 		state := stm.DirtyState[key]
 		state.Commit()

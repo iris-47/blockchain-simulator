@@ -65,6 +65,19 @@ func NewBlockChain(cc *config.ChainConfig, db ethdb.Database) (*BlockChain, erro
 	return bc, nil
 }
 
+func (bc *BlockChain) NewBlock(txs []structs.Transaction) *structs.Block {
+	bh := &structs.BlockHeader{
+		PrevBlockHash: bc.CurrentBlock.Hash,
+		Nonce:         0,
+		Height:        bc.CurrentBlock.Header.Height + 1,
+		TimeStamp:     time.Now(),
+		TxRoot:        GetTxTreeRoot(txs),
+	}
+	block := structs.NewBlock(bh, txs)
+	block.Hash = block.Header.Hash()
+	return block
+}
+
 func (bc *BlockChain) NewGenisisBlock(db ethdb.Database) *structs.Block {
 	txs := make([]structs.Transaction, 0)
 	// TODO: further config should be considered

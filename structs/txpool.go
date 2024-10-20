@@ -59,6 +59,19 @@ func (txPool *TxPool) GetTxs(count int) []Transaction {
 	return txs
 }
 
+// GetEnoughTxs() returns the first `maxcount` transactions from the TxPool.
+// If the number of transactions in the pool is less than `mincount`, it returns nil
+func (txPool *TxPool) GetEnoughTxs(mincount int, maxcount int) []Transaction {
+	txPool.lock.Lock()
+	defer txPool.lock.Unlock()
+
+	if len(txPool.Txs) < mincount {
+		return nil
+	}
+
+	return txPool.GetTxs(maxcount)
+}
+
 // WaitTxs() returns the first `batchSize` transactions from the TxPool.
 // If insufficient transactions available, it will return nil
 func (txPool *TxPool) GetBatchofTxs() []Transaction {
