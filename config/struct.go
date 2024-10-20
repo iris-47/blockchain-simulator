@@ -17,6 +17,10 @@ type Args struct {
 	ConsensusMethod string // choice fo consensus Method, for example, CShard
 	TxType          string // choice of TxType, for example, UTXO
 	LogLevel        string // Set the log level of [DEBUG, INFO, WARN, ERROR]
+
+	// <-- Client Config Related -->
+	TxInjectCount int // how many txs to inject
+	TxInjectSpeed int // how many txs to inject per second
 }
 
 // Configuration for a Blockchain

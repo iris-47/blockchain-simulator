@@ -8,6 +8,7 @@ import (
 // config of the client
 var (
 	TxInjectCount = 80000 // How much Txs to inject?
+	TxInjectSpeed = 10    // How many Txs to inject per second?
 	BatchSize     = 4000  // client read a batch of txs and then send them once
 	WaitTime      = 10    // Client wait the Txs to be processed by the blockchain system(seconds)
 )
@@ -19,7 +20,7 @@ var (
 	ConsensusInterval = 100                                                                         // (ms) the interval of the each round of consensus
 	Init_Balance, _   = new(big.Int).SetString("100000000000000000000000000000000000000000000", 10) // A new coinbase Tx
 	IPMap             = make(map[int]map[int]string)                                                // IPmap_nodeTable[shardID][nodeID] = "IP:Port"
-	MeasureMethod     = []string{"avgTPS", "TCL", "TxNum"}                                          // the client measure method, must muanlly set at here
+	MeasureMethod     = []string{"TPS", "TCL"}                                                      // the client measure method, must muanlly set at here
 	ConsensusMethod   = string("")                                                                  // the method of the consensus, set through the command line
 )
 
@@ -32,9 +33,9 @@ var (
 	IsDistributed = false     // Running in local environment or not
 	ClientShard   = 0xfffffff // the shardID of the client
 
-	StoragePath = "./record/"                                                     // the path to store the blockchain data
+	StoragePath = "./blockchain_data/"                                            // the path to store the blockchain data
 	ResultPath  = "./result/"                                                     // measurement data result output path
-	LogPath     = "./log"                                                         // log output path
+	LogPath     = "./log/"                                                        // log output path
 	StartPort   = 28800                                                           // the start port of the IPnodeTable, in local environment
 	ClientAddr  = "127.0.0.1:23333"                                               // client ip address
 	FileInput   = `/home/pjj/Desktop/BlockChain/dataset/0to99999_Transaction.csv` // the BlockTransaction data path
@@ -89,6 +90,8 @@ func InitConfig(args *Args) {
 	ConsensusMethod = args.ConsensusMethod
 	TxType = args.TxType
 	LogLevel = args.LogLevel
+	TxInjectCount = args.TxInjectCount
+	TxInjectSpeed = args.TxInjectSpeed
 
 	// init the IPMap
 	for i := 0; i < ShardNum; i++ {
