@@ -69,7 +69,13 @@ func (txPool *TxPool) GetEnoughTxs(mincount int, maxcount int) []Transaction {
 		return nil
 	}
 
-	return txPool.GetTxs(maxcount)
+	if maxcount > len(txPool.Txs) {
+		maxcount = len(txPool.Txs)
+	}
+
+	txs := txPool.Txs[:maxcount]
+	txPool.Txs = txPool.Txs[maxcount:]
+	return txs
 }
 
 // WaitTxs() returns the first `batchSize` transactions from the TxPool.
