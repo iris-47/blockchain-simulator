@@ -9,6 +9,7 @@ import (
 type MessageType int
 type MessageHandler func(msg *Message)
 
+// TODO: Add a field to indicate the sender of the message, and the signature
 type Message struct {
 	MsgType MessageType
 	Content []byte // the message body, for example, the Request, etc.

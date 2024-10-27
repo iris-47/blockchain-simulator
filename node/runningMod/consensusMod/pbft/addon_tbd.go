@@ -70,7 +70,6 @@ func (addon *PbftTBDAddon) HandlePrepareAddon(req *message.Request) bool {
 }
 
 func (addon *PbftTBDAddon) HandleCommitAddon(req *message.Request) bool {
-	// TODO: implement the commit logic
 	for !addon.GetStateUpdateDone() {
 		time.Sleep(10 * time.Millisecond) // 休眠10毫秒
 	}
