@@ -1,3 +1,5 @@
+// This file contains the handler functions for the pbft consensus module
+// in this implementation, msg.Content is the request, req.Content is the block
 package pbft
 
 import (
@@ -47,8 +49,9 @@ func NewPbftCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInte
 	pbftMod.pbft_num = config.NodeNum
 	pbftMod.malicious_num = (pbftMod.pbft_num - 1) / 3
 	pbftMod.view = config.ViewNodeId
+	pbftMod.consensusDone = make(chan struct{})
 
-	addonMod, err := NewPbftAddon(config.ConsensusMethod, attr)
+	addonMod, err := NewPbftAddon(config.ConsensusMethod, pbftMod)
 	if err != nil {
 		utils.LoggerInstance.Error("Error creating pbft addon module: %v", err)
 		log.Panicf("Error creating pbft addon module: %v", err)
@@ -72,7 +75,7 @@ func (pbftmod *PbftCosensusMod) handlePropose(msg *message.Message) {
 
 	pbftmod.requestPool[string(req.Digest[:])] = NewRequestInfo(req)
 	// invoke the addon module to handle the propose message
-	flag := pbftmod.addonMod.HandleProposeAddon(msg)
+	flag := pbftmod.addonMod.HandleProposeAddon(&req)
 	if !flag {
 		utils.LoggerInstance.Warn("addon handle propose failed")
 		return
@@ -95,16 +98,16 @@ func (pbftmod *PbftCosensusMod) handlePrePrepare(msg *message.Message) {
 
 	pbftmod.requestPool[string(req.Digest[:])] = NewRequestInfo(req)
 	// invoke the addon module to handle the pre-prepare message
-	flag := pbftmod.addonMod.HandlePrePrepareAddon(msg)
+	flag := pbftmod.addonMod.HandlePrePrepareAddon(&req)
 	if !flag {
-		utils.LoggerInstance.Warn("addon handle propose failed")
+		utils.LoggerInstance.Warn("addon handle pre-prepare failed")
 		return
 	}
 	pmsg := message.Message{
 		MsgType: message.MsgPrepare,
 		Content: msg.Content,
 	}
-	pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(), pmsg.JsonEncode())
+	pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), pmsg.JsonEncode())
 	utils.LoggerInstance.Info("Broadcast the prepare message")
 }
 
@@ -120,7 +123,7 @@ func (pbftmod *PbftCosensusMod) handlePrepare(msg *message.Message) {
 		return
 	}
 
-	pbftmod.addonMod.HandlePrepareAddon(msg)
+	pbftmod.addonMod.HandlePrepareAddon(&req)
 
 	// Seems the node received the PrepareMsg before any of the PrePrepareMsg
 	if pbftmod.requestPool[string(req.Digest[:])] == nil {
@@ -145,7 +148,7 @@ func (pbftmod *PbftCosensusMod) handlePrepare(msg *message.Message) {
 			MsgType: message.MsgCommit,
 			Content: msg.Content,
 		}
-		pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(), cmsg.JsonEncode())
+		pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), cmsg.JsonEncode())
 	}
 }
 
@@ -167,16 +170,25 @@ func (pbftmod *PbftCosensusMod) handleCommit(msg *message.Message) {
 		pbftmod.requestPool[string(req.Digest[:])] = NewRequestInfo(req)
 	}
 
-	if pbftmod.requestPool[string(req.Digest[:])].IncCommitConfirm() >= 2*pbftmod.malicious_num && !pbftmod.requestPool[string(req.Digest[:])].IsReplySent() {
+	pbftmod.requestPool[string(req.Digest[:])].IncCommitConfirm()
+
+	if pbftmod.requestPool[string(req.Digest[:])].GetCommitConfirm() >= 2*pbftmod.malicious_num && !pbftmod.requestPool[string(req.Digest[:])].IsReplySent() {
 		pbftmod.requestPool[string(req.Digest[:])].SetReplySent()
 		utils.LoggerInstance.Info("Received enough commit messages")
 
-		pbftmod.addonMod.HandleCommitAddon(msg)
+		pbftmod.addonMod.HandleCommitAddon(&req)
 
-		if pbftmod.nodeAttr.Nid == pbftmod.view {
-			// time.Sleep(time.Millisecond * time.Duration(config.NodeNum*config.BlockSize/125)) // delay to mimic the network delay
-			pbftmod.consensusDone <- struct{}{} // notify the consensus is done
-		}
+		// if pbftmod.nodeAttr.Nid == pbftmod.view {
+		// 	pbftmod.consensusDone <- struct{}{} // notify the consensus is done
+		// }
+	}
+
+	// view node need to wait for all the nodes to confirm the commit message.
+	// This is not the standard practice for production. It's solely to ensure all nodes are synchronized in the same PBFT round.
+	// BUG: when Shard Num > 4, the view node will not receive enough commit message from the other nodes for no reason
+	if pbftmod.nodeAttr.Nid == pbftmod.view && pbftmod.requestPool[string(req.Digest[:])].GetCommitConfirm() == config.ShardNum-1 {
+		utils.LoggerInstance.Info("Consensus is done!")
+		pbftmod.consensusDone <- struct{}{} // notify the consensus is done
 	}
 }
 
@@ -189,9 +201,9 @@ func (pbftmod *PbftCosensusMod) RegisterHandlers() {
 }
 
 // get the ip addresses of the nodes in the same shard
-func (pbftmod *PbftCosensusMod) getNeighbours() []string {
+func (pbftmod *PbftCosensusMod) getNeighbours(shardIPs map[int]string) []string {
 	neighbours := make([]string, 0)
-	for _, ip := range config.IPMap[pbftmod.nodeAttr.Sid] {
+	for _, ip := range shardIPs {
 		if ip == pbftmod.nodeAttr.Ipaddr {
 			continue
 		}
@@ -227,17 +239,19 @@ func (pbftmod *PbftCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {
 			// time.Sleep(time.Millisecond * time.Duration(config.NodeNum*config.BlockSize/125))
 
 			ppmsg := message.Message{
-				MsgType: message.MsgPropose,
+				MsgType: message.MsgPrePrepare,
 				Content: utils.Encode(req),
 			}
-			pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(), ppmsg.JsonEncode())
+			pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), ppmsg.JsonEncode())
 			utils.LoggerInstance.Info("Broadcast the propose message")
+			pbftmod.p2pMod.MsgHandlerMap[message.MsgPrePrepare](&ppmsg)
 
 			// wait for the consensus to be done
 			select {
 			case <-pbftmod.consensusDone:
 				// consensus interval, waits for other nodes to complete the consensus
-				time.Sleep(time.Millisecond * time.Duration(config.ConsensusInterval))
+				// time.Sleep(time.Millisecond * time.Duration(config.ConsensusInterval))
+				utils.LoggerInstance.Info("Consensus is done, go next round")
 			case <-ctx.Done():
 				utils.LoggerInstance.Info("Stop the intra-shard consensus Mod")
 				return

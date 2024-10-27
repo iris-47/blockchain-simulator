@@ -15,9 +15,9 @@ type Transaction interface {
 	// <---Get value from Transaction--->
 	// returns the transaction ID, usually the same to Hash()
 	ID() []byte
-	// returns the sender's address
+	// returns the sender's address, it is a slice because the sender may be multiple(UTXO)
 	From() []Address
-	// returns the recipient's address
+	// returns the recipient's address， it is a slice because the recipient may be multiple(UTXO)
 	To() []Address
 	// returns the time of the transaction
 	GetTime() time.Time

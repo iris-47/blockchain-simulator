@@ -2,30 +2,33 @@ package pbft
 
 import (
 	"BlockChainSimulator/message"
-	"BlockChainSimulator/node/nodeattr"
 )
+
+var _ PbftAddon = &PbftSimpleAddon{}
 
 // a simple PBFT addon, which implemen
 type PbftSimpleAddon struct {
-	nodeAttr *nodeattr.NodeAttr
+	pbftMod *PbftCosensusMod // the belonging pbft module
 }
 
-func NewSimplePbftCosensusAddon(attr *nodeattr.NodeAttr) PbftAddon {
-	return &PbftSimpleAddon{nodeAttr: attr}
+func NewSimplePbftCosensusAddon(pbftMod *PbftCosensusMod) PbftAddon {
+	return &PbftSimpleAddon{
+		pbftMod: pbftMod,
+	}
 }
 
-func (addon *PbftSimpleAddon) HandleProposeAddon(msg *message.Message) bool {
+func (addon *PbftSimpleAddon) HandleProposeAddon(req *message.Request) bool {
 	return true
 }
 
-func (addon *PbftSimpleAddon) HandlePrePrepareAddon(msg *message.Message) bool {
+func (addon *PbftSimpleAddon) HandlePrePrepareAddon(req *message.Request) bool {
 	return true
 }
 
-func (addon *PbftSimpleAddon) HandlePrepareAddon(msg *message.Message) bool {
+func (addon *PbftSimpleAddon) HandlePrepareAddon(req *message.Request) bool {
 	return true
 }
 
-func (addon *PbftSimpleAddon) HandleCommitAddon(msg *message.Message) bool {
+func (addon *PbftSimpleAddon) HandleCommitAddon(req *message.Request) bool {
 	return true
 }

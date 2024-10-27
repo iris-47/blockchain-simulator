@@ -1,4 +1,4 @@
-package auxiliaryMod
+package clientMod
 
 import (
 	"BlockChainSimulator/config"

@@ -35,6 +35,7 @@ func NewNode(sid int, nid int, pcc *config.ChainConfig, runningModTypes []string
 			utils.LoggerInstance.Error("Error creating running module: %v", runningModType)
 			return nil, err
 		}
+		utils.LoggerInstance.Info("Created running module: %v", runningModType)
 		node.RunningMods = append(node.RunningMods, runningMod)
 	}
 

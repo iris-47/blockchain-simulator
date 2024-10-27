@@ -53,12 +53,7 @@ func (sam *ProposeTxsAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup) 
 				continue
 			}
 
-			req := message.Request{
-				ReqType: message.ReqVerifyTxs,
-				Content: utils.Encode(txs),
-				ReqTime: time.Now(),
-			}
-			req.CalDigest()
+			req := message.NewRequest(sam.nodeAttr.Sid, message.ReqVerifyTxs, utils.Encode(txs))
 
 			msg := message.Message{
 				MsgType: message.MsgPropose,
@@ -81,6 +76,6 @@ func (sam *ProposeTxsAuxiliaryMod) handleInject(msg *message.Message) {
 		return
 	}
 
-	utils.LoggerInstance.Debug("Received txs: %v", txs)
+	utils.LoggerInstance.Debug("Received txs len: %d", len(txs))
 	sam.txPool.AddTxs(txs)
 }

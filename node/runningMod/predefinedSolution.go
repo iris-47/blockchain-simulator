@@ -2,9 +2,13 @@
 package runningMod
 
 var (
-	ClassicPBFTConsensusNode = []string{PBFTMod, ProposeTxsMod} // a classic PBFT consensus node
+	PBFTConsensusNode   = []string{PBFTMod}                          // a PBFT consensus node
+	ClassicPBFTViewNode = []string{PBFTMod, ProposeBlockMod}         // a classic PBFT consensus node
+	TBDViewNode         = []string{PBFTMod, ProposeBlock2ChannelMod} // a TBD consensus node
 )
 
 var (
-	TestClientNode = []string{TestMod, StartSystemMod} // a test client node
+	TestClientNode    = []string{StartSystemMod, TestMod}                             // a test client node
+	ClassicClientNode = []string{StartSystemMod, MeasureMod}                          // a classic client node without txs injection
+	TBDClientNode     = []string{StartSystemMod, MeasureMod, SendMimicContractTxsMod} // a TBD client node
 )

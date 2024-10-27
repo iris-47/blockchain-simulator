@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"BlockChainSimulator/config"
+	"BlockChainSimulator/utils"
 	"net"
 	"time"
 )
@@ -29,9 +30,11 @@ func WaitForShardReady(sid int, timeout time.Duration) bool {
 func WaitForAllIPsReady(timeout time.Duration) bool {
 	start := time.Now()
 
-	for _, shardips := range config.IPMap {
-		for _, ip := range shardips {
+	for i := 0; i < config.ShardNum; i++ {
+		for j := 0; j < config.NodeNum; j++ {
+			ip := config.IPMap[i][j]
 			for !PortListening(ip) {
+				utils.LoggerInstance.Debug("Wait for %s to be ready", ip)
 				if time.Since(start) > timeout {
 					return false
 				}

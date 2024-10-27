@@ -6,10 +6,13 @@ import (
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
 	"log"
+	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/trie"
+	"golang.org/x/exp/rand"
 )
 
 type StateManager struct {
@@ -40,6 +43,13 @@ func NewStateManager(cc *config.ChainConfig, db ethdb.Database) (*StateManager, 
 // Check the txs and update the states to the DirtyState
 func (stm *StateManager) UpdateStates(txs []structs.Transaction, stateRoot []byte) bool {
 	flag := true
+	if config.TxVerifyTime {
+		// randomly delay the execution time of the transaction around execTimeDelay(ms)
+		delay := rand.Intn(config.ExecTimeDelay*2) + config.ExecTimeDelay
+		time.Sleep(time.Duration(delay) * time.Millisecond * time.Duration(len(txs)))
+
+		return flag
+	}
 
 	st, err := trie.New(trie.TrieID(common.BytesToHash(stateRoot)), stm.triedb)
 	if err != nil {
@@ -51,7 +61,17 @@ func (stm *StateManager) UpdateStates(txs []structs.Transaction, stateRoot []byt
 		if tx.Type() == structs.UTXOTransactionType {
 			// update the UTXO set
 		} else if tx.Type() == structs.AccountTransactionType {
-			// update the state of the account
+			acTx := tx.(*structs.AccountTransaction)
+
+			// update the state of the sender
+			if utils.Addr2Shard(acTx.Sender) == stm.ChainConfig.ShardID {
+				stm.UpdateAccountState(acTx.Sender, acTx.Value, st, false)
+			}
+
+			// update the state of the receiver
+			if utils.Addr2Shard(acTx.Recipient) == stm.ChainConfig.ShardID {
+				stm.UpdateAccountState(acTx.Recipient, acTx.Value, st, true)
+			}
 		} else if tx.Type() == structs.ETHLikeContractTransactionType {
 			receiver := tx.To()[0]
 			if utils.Addr2Shard(receiver) == stm.ChainConfig.ShardID {
@@ -83,6 +103,9 @@ func (stm *StateManager) UpdateStates(txs []structs.Transaction, stateRoot []byt
 
 // Consensus Passed, Commit the states
 func (stm *StateManager) CommitStates(stateRoot []byte) []byte {
+	if config.TxVerifyTime {
+		return stateRoot
+	}
 	st, err := trie.New(trie.TrieID(common.BytesToHash(stateRoot)), stm.triedb)
 	if err != nil {
 		utils.LoggerInstance.Error("Failed to create the trie")
@@ -108,4 +131,39 @@ func (stm *StateManager) CommitStates(stateRoot []byte) []byte {
 	}
 
 	return rootHash.Bytes()
+}
+
+func (stm *StateManager) UpdateAccountState(addr string, amount *big.Int, st *trie.Trie, deposit bool) {
+	// update the state of the sender
+	var state *structs.AccountState
+
+	// get the current account state
+	if stm.DirtyState[addr] == nil {
+		stateBytes, _ := st.Get([]byte(addr))
+		if stateBytes == nil {
+			// the account has not been created
+			utils.LoggerInstance.Info("The account %s has not been created, now create it", addr)
+			// create a new account
+			state = &structs.AccountState{
+				AcAddress: addr,
+				Nonce:     0,
+				Balance:   config.Init_Balance,
+			}
+		} else {
+			utils.Decode(stateBytes, state)
+		}
+	} else {
+		state = stm.DirtyState[addr].(*structs.AccountState)
+	}
+
+	// update the balance of the account state
+	if deposit {
+		state.Deposit(amount)
+	} else {
+		if !state.Deduct(amount) {
+			utils.LoggerInstance.Warn("Failed to deduct the balance of the account %s, insufficient funds", addr)
+		}
+	}
+
+	stm.DirtyState[string(state.GetKey())] = state // update the state in the DirtyState
 }

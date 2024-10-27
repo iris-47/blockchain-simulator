@@ -1,4 +1,4 @@
-package auxiliaryMod
+package clientMod
 
 import (
 	"BlockChainSimulator/config"
@@ -38,7 +38,7 @@ func (sam *StartSystemAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup)
 	for i := 0; i < config.ShardNum; i++ {
 		// start the shard
 		for j := 0; j < config.NodeNum; j++ {
-			// start the node
+			// start the consensus node, no more need the client-related parameters
 			cmdstr := "./BlockChainSimulator" +
 				" -b " + strconv.Itoa(config.BlockSize) +
 				" -S " + strconv.Itoa(config.ShardNum) + " -N " + strconv.Itoa(config.NodeNum) +

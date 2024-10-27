@@ -33,11 +33,23 @@ func (ri *RequestInfo) IncPrepareConfirm() int {
 	return ri.cntPrepareConfirm
 }
 
+func (ri *RequestInfo) GetPrepareConfirm() int {
+	ri.Lock()
+	defer ri.Unlock()
+	return ri.cntPrepareConfirm
+}
+
 // Increase the number of commit messages received and return the new count
 func (ri *RequestInfo) IncCommitConfirm() int {
 	ri.Lock()
 	defer ri.Unlock()
 	ri.cntCommitConfirm++
+	return ri.cntCommitConfirm
+}
+
+func (ri *RequestInfo) GetCommitConfirm() int {
+	ri.Lock()
+	defer ri.Unlock()
 	return ri.cntCommitConfirm
 }
 

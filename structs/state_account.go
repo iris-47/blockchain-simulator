@@ -14,10 +14,10 @@ func init() {
 }
 
 type AccountState struct {
-	AcAddress     Address
-	Nonce         int64
-	Balance       *big.Int
-	BackupBalance *big.Int
+	AcAddress    Address
+	Nonce        int64
+	Balance      *big.Int
+	DirtyBalance *big.Int
 }
 
 func (as *AccountState) Hash() []byte {
@@ -38,14 +38,14 @@ func (as *AccountState) GetBalance() *big.Int {
 }
 
 func (as *AccountState) Deposit(amount *big.Int) {
-	as.Balance.Add(as.Balance, amount)
+	as.Balance.Add(as.DirtyBalance, amount)
 }
 
 func (as *AccountState) Deduct(amount *big.Int) bool {
-	if as.Balance.Cmp(amount) < 0 {
+	if as.DirtyBalance.Cmp(amount) < 0 {
 		return false
 	}
-	as.Balance.Sub(as.Balance, amount)
+	as.DirtyBalance.Sub(as.DirtyBalance, amount)
 	return true
 }
 
@@ -57,10 +57,10 @@ func (as *AccountState) Update(tx Transaction) bool {
 	return true
 }
 
-func (as *AccountState) Commit() {
-	as.BackupBalance = as.Balance
+func (as *AccountState) Rollback() {
+	as.DirtyBalance = as.Balance
 }
 
-func (as *AccountState) Rollback() {
-	as.Balance = as.BackupBalance
+func (as *AccountState) Commit() {
+	as.Balance = as.DirtyBalance
 }

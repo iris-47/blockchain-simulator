@@ -23,7 +23,7 @@ type BlockChain struct {
 	StateManager *StateManager       // the state manager to manage the states of the blockchain
 }
 
-func NewBlockChain(cc *config.ChainConfig, db ethdb.Database) (*BlockChain, error) {
+func NewBlockChain(cc *config.ChainConfig) (*BlockChain, error) {
 	bc := &BlockChain{
 		ChainConfig: cc,
 		Storage:     storage.NewStorage(cc),
@@ -35,14 +35,22 @@ func NewBlockChain(cc *config.ChainConfig, db ethdb.Database) (*BlockChain, erro
 		log.Panic(err)
 	}
 
+	bc.StateManager, err = NewStateManager(cc, db)
+	if err != nil {
+		utils.LoggerInstance.Error("Failed to create the state manager:%v", err)
+		log.Panic(err)
+	}
+
 	curHash, err := bc.Storage.GetNewestBlockHash()
 	if err != nil {
 		// no blockchain in the storage
 		if err.Error() == "cannot find the newest block hash" {
 			genesisBlock := bc.NewGenisisBlock(db)
 			bc.AddGenesisBlock(genesisBlock)
+			utils.LoggerInstance.Info("Create new blockchain successfully")
 			return bc, nil
 		} else {
+			utils.LoggerInstance.Error("Failed to get the newest block hash, unknown error%v", err)
 			log.Panic()
 		}
 	}
@@ -50,10 +58,10 @@ func NewBlockChain(cc *config.ChainConfig, db ethdb.Database) (*BlockChain, erro
 	// there is a blockchain in the storage
 	curBlock, err := bc.Storage.GetBlock(curHash)
 	if err != nil {
+		utils.LoggerInstance.Error("Failed to get the newest block")
 		log.Panic()
 	}
 	bc.CurrentBlock = curBlock
-	bc.StateManager, err = NewStateManager(cc, db)
 
 	_, err = trie.New(trie.TrieID(common.BytesToHash(curBlock.Header.StateRoot)), bc.StateManager.triedb)
 	if err != nil {
@@ -103,11 +111,11 @@ func (bc *BlockChain) AddGenesisBlock(b *structs.Block) {
 	bc.Storage.AddBlock(b)
 	newestHash, err := bc.Storage.GetNewestBlockHash()
 	if err != nil {
-		utils.LoggerInstance.Error("Get newest block hash failed")
+		utils.LoggerInstance.Error("Get newest block hash failed, error:%v", err)
 	}
 	current_b, err := bc.Storage.GetBlock(newestHash)
 	if err != nil {
-		utils.LoggerInstance.Error("Get newest block failed")
+		utils.LoggerInstance.Error("Get newest block failed, error:%v", err)
 	}
 	bc.CurrentBlock = current_b
 }

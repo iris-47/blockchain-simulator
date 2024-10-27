@@ -5,6 +5,11 @@ import (
 	"strconv"
 )
 
+var (
+	TxVerifyTime  = true // Estimate means just estimate the time, not really update the state
+	ExecTimeDelay = 2    // mimic the execution time of a transaction
+)
+
 // config of the client
 var (
 	TxInjectCount = 80000 // How much Txs to inject?
@@ -20,7 +25,7 @@ var (
 	ConsensusInterval = 100                                                                         // (ms) the interval of the each round of consensus
 	Init_Balance, _   = new(big.Int).SetString("100000000000000000000000000000000000000000000", 10) // A new coinbase Tx
 	IPMap             = make(map[int]map[int]string)                                                // IPmap_nodeTable[shardID][nodeID] = "IP:Port"
-	MeasureMethod     = []string{"TPS", "TCL"}                                                      // the client measure method, must muanlly set at here
+	MeasureMethod     = []string{"TPS", "TCL", "WaitLen"}                                           // the client measure method, must muanlly set at here
 	ConsensusMethod   = string("")                                                                  // the method of the consensus, set through the command line
 )
 

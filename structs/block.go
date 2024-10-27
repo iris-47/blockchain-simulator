@@ -3,6 +3,7 @@ package structs
 
 import (
 	"BlockChainSimulator/utils"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -26,7 +27,8 @@ type BlockHeader struct {
 }
 
 func (bh *BlockHeader) Hash() []byte {
-	return utils.Hash(bh)
+	hash := sha256.Sum256(utils.Encode(bh))
+	return hash[:]
 }
 
 type Block struct {

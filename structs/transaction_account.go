@@ -2,6 +2,7 @@
 package structs
 
 import (
+	"BlockChainSimulator/utils"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
@@ -31,6 +32,22 @@ type AccountTransaction struct {
 	FinalRecipient Address
 
 	Siganature []byte // not implemented yet
+}
+
+func NewAccountTransaction(sender Address, recipient Address, nounce int64, value *big.Int) *AccountTransaction {
+	tx := &AccountTransaction{
+		Sender:    sender,
+		Recipient: recipient,
+		Nounce:    nounce,
+		Value:     value,
+		Time:      time.Now(),
+	}
+	tx.TxHash = utils.Hash(utils.Encode(tx))
+	return tx
+}
+
+func NewAcconutCoinbase(recipient Address, value *big.Int) *AccountTransaction {
+	return NewAccountTransaction("", recipient, 0, value)
 }
 
 func (tx *AccountTransaction) Type() string {

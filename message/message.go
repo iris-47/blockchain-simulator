@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type MessageType int
@@ -19,7 +20,7 @@ const (
 	MsgNodeReady // a node is ready to receive messages
 	MsgStop      // stop the node
 	MsgInject    // inject the Txs data(always from the client) to the system
-	MsgVerified  // send the verified requests back to the client
+	MsgReply     // send the verified requests back to the client
 
 	// PBFT
 	MsgPropose
@@ -36,6 +37,25 @@ const (
 	MsgPreInject         // used to pre-inject the data to the system
 	MsgBlockLegal        // a legal block, used to store the block
 )
+
+// the basic info of the shard to send back to the client
+type Reply struct {
+	Req  *Request  // verified request
+	Time time.Time // the time when creating the reply
+
+	Sid         int // the shard id
+	ReqQueueLen int // the length of the request queue of the shard
+}
+
+func (rep *Reply) String() string {
+	result := "["
+	result += fmt.Sprintf("Time: %s, ", rep.Time.String())
+	result += fmt.Sprintf("Sid: %d, ", rep.Sid)
+	result += fmt.Sprintf("ReqQueueLen: %d, ", rep.ReqQueueLen)
+	result += "], "
+	result += fmt.Sprintf("Req:%v", rep.Req)
+	return result
+}
 
 // Encode the message into a byte array
 func (msg *Message) JsonEncode() []byte {

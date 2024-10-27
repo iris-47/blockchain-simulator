@@ -64,7 +64,7 @@ func (p2p *P2PMod) handleConnection(conn net.Conn) {
 
 		content, err := reader.ReadBytes('\n')
 		if err == io.EOF {
-			utils.LoggerInstance.Warn("Connection closed by peer: %v\n", conn.RemoteAddr())
+			// utils.LoggerInstance.Warn("Connection closed by peer: %v\n", conn.RemoteAddr())
 			return
 		} else if err != nil {
 			utils.LoggerInstance.Error("Error reading from connection: %v\n", err)
@@ -73,7 +73,7 @@ func (p2p *P2PMod) handleConnection(conn net.Conn) {
 
 		msg := new(message.Message)
 		message.JsonDecode(content, msg)
-		utils.LoggerInstance.Debug("Received msg of type %v len %v", msg.MsgType, len(content))
+		// utils.LoggerInstance.Debug("Received msg of type %v len %v", msg.MsgType, len(content))
 
 		if handler, ok := p2p.MsgHandlerMap[msg.MsgType]; ok {
 			handler(msg) // Q: why use/not use go here?

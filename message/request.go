@@ -4,6 +4,7 @@ import (
 	"BlockChainSimulator/utils"
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -20,12 +21,11 @@ const (
 
 // always indicate which kind of request a consensus is proposing
 type Request struct {
-	ShardId         int
-	ReqType         RequestType
-	Content         []byte    // the request body, e.g., the block to be verified
-	ReqTime         time.Time // the time when the request is created
-	ReqVerifiedTime time.Time // the time when the request is verified
-	Digest          [32]byte  // hash of the request
+	ShardId int
+	ReqType RequestType
+	Content []byte    // the request body, e.g., the block to be verified
+	ReqTime time.Time // the time when the request is created
+	Digest  [32]byte  // hash of the request
 }
 
 func NewRequest(shardId int, reqType RequestType, content []byte) *Request {
@@ -49,9 +49,12 @@ func (req *Request) CalDigest() {
 	req.Digest = sha256.Sum256(b)
 }
 
-// used in Propose to indicate the sender of the request
-// not in use now
-type RequestWithSender struct {
-	Sender  string
-	Request Request
+func (req *Request) String() string {
+	str := "{\n"
+	str += fmt.Sprintf("\tShardId: %d\n", req.ShardId)
+	str += fmt.Sprintf("\tReqType: %d\n", req.ReqType)
+	// str += fmt.Sprintf("\tContent: %s\n", string(req.Content))
+	str += fmt.Sprintf("\tReqTime: %s\n", req.ReqTime)
+	str += fmt.Sprintf("\tDigest: %x\n", req.Digest)
+	return str
 }
