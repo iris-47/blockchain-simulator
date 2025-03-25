@@ -7,6 +7,10 @@ import (
 	"github.com/herumi/bls-go-binary/bls"
 )
 
+type Signature = bls.Sign
+type SecretKey = bls.SecretKey
+type PublicKey = bls.PublicKey
+
 func init() {
 	err := bls.Init(bls.BLS12_381)
 	if err != nil {
@@ -15,77 +19,42 @@ func init() {
 }
 
 // 生成密钥对
-func GenerateKeyPair() ([]byte, []byte) {
-	sk := bls.SecretKey{}
+func GenerateKeyPair() (*SecretKey, *PublicKey) {
+	sk := &bls.SecretKey{}
 	sk.SetByCSPRNG()
 	pk := sk.GetPublicKey()
-	return sk.Serialize(), pk.Serialize()
+	return sk, pk
 }
 
 // 生成 BLS 签名
-func Sign(privateKey []byte, msgHash []byte) ([]byte, error) {
-	var sk bls.SecretKey
-	err := sk.Deserialize(privateKey)
-
-	if err != nil {
-		utils.LoggerInstance.Error("Failed to deserialize the private key")
-	}
-
-	sig := sk.SignHash(msgHash)
-	return sig.Serialize(), nil
+func Sign(privateKey *SecretKey, msgHash []byte) *Signature {
+	return privateKey.SignHash(msgHash)
 }
 
 // Verify 验证 BLS 签名
-func Verify(publicKey []byte, msgHash []byte, signature []byte) bool {
-	var pk bls.PublicKey
-	err := pk.Deserialize(publicKey)
-	if err != nil {
-		utils.LoggerInstance.Error("Failed to deserialize the public key")
-	}
-
-	var sig bls.Sign
-	err = sig.Deserialize(signature)
-	if err != nil {
-		utils.LoggerInstance.Error("Failed to deserialize the signature")
-	}
-	return sig.VerifyHash(&pk, msgHash)
+func Verify(publicKey *PublicKey, msgHash []byte, signature *Signature) bool {
+	return signature.VerifyHash(publicKey, msgHash)
 }
 
 // 聚合签名
-func AggregateSignatures(signatures [][]byte) ([]byte, error) {
+func AggregateSignatures(signatures []*Signature) (*Signature, error) {
 	var aggregatedSignature bls.Sign
 	sigs := make([]bls.Sign, len(signatures))
 
-	for i := range sigs {
-		var sig bls.Sign
-		err := sig.Deserialize(signatures[i])
-		if err != nil {
-			utils.LoggerInstance.Error("Failed to deserialize the signature")
-		}
-		sigs[i] = sig
+	for i := range signatures {
+		sigs[i] = *signatures[i]
 	}
 
 	aggregatedSignature.Aggregate(sigs)
 
-	return aggregatedSignature.Serialize(), nil
+	return &aggregatedSignature, nil
 }
 
 // 验证聚合签名
-func VerifyAggregatedSignature(publicKeys [][]byte, msgHash []byte, signature []byte) bool {
-	var aggregatedSignature bls.Sign
-	err := aggregatedSignature.Deserialize(signature)
-	if err != nil {
-		utils.LoggerInstance.Error("Failed to deserialize the signature")
-	}
-
+func VerifyAggregatedSignature(publicKeys []*PublicKey, msgHash []byte, aggSignature *Signature) bool {
 	pks := make([]bls.PublicKey, len(publicKeys))
 	for i := range publicKeys {
-		var pk bls.PublicKey
-		err := pk.Deserialize(publicKeys[i])
-		if err != nil {
-			utils.LoggerInstance.Error("Failed to deserialize the public key")
-		}
-		pks[i] = pk
+		pks[i] = *publicKeys[i]
 	}
 
 	// 项目中聚合签名的场景是相同的消息，所以这里直接复制相同的消息
@@ -93,5 +62,5 @@ func VerifyAggregatedSignature(publicKeys [][]byte, msgHash []byte, signature []
 	for i := range pks {
 		hs[i] = msgHash
 	}
-	return aggregatedSignature.VerifyAggregateHashes(pks, hs)
+	return aggSignature.VerifyAggregateHashes(pks, hs)
 }

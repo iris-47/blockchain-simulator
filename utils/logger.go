@@ -27,6 +27,11 @@ type Logger struct {
 	lock sync.Mutex
 }
 
+// consider using init() to create the default logger instance to avoid faulty usage
+// func init() {
+// 	LoggerInstance, _ = NewLogger(&config.Args{}, "INFO", true, true)
+// }
+
 // must be created before using the logger
 var LoggerInstance *Logger
 

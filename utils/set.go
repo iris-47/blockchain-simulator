@@ -32,3 +32,26 @@ func (s *Set[T]) Contains(item T) bool {
 func (s *Set[T]) Size() int {
 	return len(s.data)
 }
+
+func (s *Set[T]) GetItems() []T {
+	keys := make([]T, 0, len(s.data))
+	for k := range s.data {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (s *Set[T]) Union(other *Set[T]) *Set[T] {
+	result := NewSet[T]()
+	for k := range s.data {
+		result.Add(k)
+	}
+	for k := range other.data {
+		result.Add(k)
+	}
+	return result
+}
+
+func (s *Set[T]) Clear() {
+	s.data = make(map[T]struct{})
+}
