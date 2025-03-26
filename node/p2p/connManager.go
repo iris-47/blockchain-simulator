@@ -3,7 +3,6 @@ package p2p
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/utils"
-	"fmt"
 	"net"
 	"sync"
 )
@@ -26,7 +25,8 @@ func (conm *ConnMananger) getPool(addr string) *sync.Pool {
 			New: func() interface{} {
 				conn, err := net.Dial("tcp", addr)
 				if err != nil {
-					panic(err)
+					utils.LoggerInstance.Error("Failed to connect to %s, err: %v", addr, err)
+					return nil
 				}
 				return conn
 			},
@@ -38,8 +38,14 @@ func (conm *ConnMananger) getPool(addr string) *sync.Pool {
 }
 
 // send a message to the target address
-func (conm *ConnMananger) Send(addr string, context []byte) error {
+func (conm *ConnMananger) Send(addr string, context []byte) {
 	pool := conm.getPool(addr)
+
+	connInterface := pool.Get()
+	if connInterface == nil {
+		utils.LoggerInstance.Error("Failed to get connection from pool")
+		return
+	}
 
 	conn := pool.Get().(net.Conn)
 	defer pool.Put(conn)
@@ -47,11 +53,10 @@ func (conm *ConnMananger) Send(addr string, context []byte) error {
 	_, err := conn.Write(append(context, '\n'))
 	if err != nil {
 		conn.Close()
-		utils.LoggerInstance.Error("Failed to send message to %s", addr)
-		return fmt.Errorf("failed to send message: %w", err)
-	}
+		utils.LoggerInstance.Error("Failed to send message to %s, err: %v", addr, err)
 
-	return nil
+		return
+	}
 }
 
 func (conm *ConnMananger) Broadcast(sender string, addrs []string, context []byte) {
