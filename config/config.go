@@ -32,7 +32,7 @@ var (
 // config of the running environment
 var (
 	NodeNum       = 4         // total number of nodes in a shard
-	ShardNum      = 4         // total number of shards
+	ShardNum      = 1         // total number of shards, default no sharding
 	ViewNodeId    = 0         // the nodeID of the initial view nodes
 	LogLevel      = "INFO"    // default log level
 	IsDistributed = false     // Running in local environment or not
