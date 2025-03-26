@@ -28,9 +28,9 @@ type Logger struct {
 }
 
 // consider using init() to create the default logger instance to avoid faulty usage
-// func init() {
-// 	LoggerInstance, _ = NewLogger(&config.Args{}, "INFO", true, true)
-// }
+func init() {
+	LoggerInstance, _ = NewLogger(&config.Args{}, "DEBUG", true, false)
+}
 
 // must be created before using the logger
 var LoggerInstance *Logger

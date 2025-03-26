@@ -3,6 +3,7 @@ package signature
 
 import (
 	"BlockChainSimulator/utils"
+	"fmt"
 
 	"github.com/herumi/bls-go-binary/bls"
 )
@@ -28,11 +29,40 @@ func GenerateKeyPair() (*SecretKey, *PublicKey) {
 
 // 生成 BLS 签名
 func Sign(privateKey *SecretKey, msgHash []byte) *Signature {
+	if len(msgHash) == 0 {
+		utils.LoggerInstance.Error("Empty message hash")
+		return nil
+	}
+	if msgHash == nil {
+		utils.LoggerInstance.Error("Nil message hash")
+		return nil
+	}
+	if privateKey == nil {
+		utils.LoggerInstance.Error("Empty private key")
+		return nil
+	}
 	return privateKey.SignHash(msgHash)
 }
 
 // Verify 验证 BLS 签名
 func Verify(publicKey *PublicKey, msgHash []byte, signature *Signature) bool {
+	if len(msgHash) == 0 {
+		utils.LoggerInstance.Error("Empty message hash")
+		return false
+	}
+	if msgHash == nil {
+		utils.LoggerInstance.Error("Nil message hash")
+		return false
+	}
+	if publicKey == nil {
+		utils.LoggerInstance.Error("Empty public key")
+		return false
+	}
+	if signature == nil {
+		utils.LoggerInstance.Error("Empty signature")
+		return false
+	}
+
 	return signature.VerifyHash(publicKey, msgHash)
 }
 
@@ -41,7 +71,14 @@ func AggregateSignatures(signatures []*Signature) (*Signature, error) {
 	var aggregatedSignature bls.Sign
 	sigs := make([]bls.Sign, len(signatures))
 
+	if len(signatures) == 0 {
+		return nil, fmt.Errorf("empty signatures")
+	}
+
 	for i := range signatures {
+		if signatures[i] == nil {
+			return nil, fmt.Errorf("signature at index %d is nil", i)
+		}
 		sigs[i] = *signatures[i]
 	}
 
