@@ -8,9 +8,9 @@ import (
 	"github.com/herumi/bls-go-binary/bls"
 )
 
-type Signature = bls.Sign
-type SecretKey = bls.SecretKey
-type PublicKey = bls.PublicKey
+type Signature struct{ s bls.Sign }
+type SecretKey struct{ s bls.SecretKey }
+type PublicKey struct{ p bls.PublicKey }
 
 func init() {
 	err := bls.Init(bls.BLS12_381)
@@ -19,15 +19,14 @@ func init() {
 	}
 }
 
-// 生成密钥对
 func GenerateKeyPair() (*SecretKey, *PublicKey) {
 	sk := &bls.SecretKey{}
 	sk.SetByCSPRNG()
 	pk := sk.GetPublicKey()
-	return sk, pk
+	return &SecretKey{*sk}, &PublicKey{*pk}
 }
 
-// 生成 BLS 签名
+// 生成 BLS 签名，注意msgHash必须由sha256.Sum256生成，否则会没有报错地闪退，原因未知（摊手
 func Sign(privateKey *SecretKey, msgHash []byte) *Signature {
 	if len(msgHash) == 0 {
 		utils.LoggerInstance.Error("Empty message hash")
@@ -41,7 +40,9 @@ func Sign(privateKey *SecretKey, msgHash []byte) *Signature {
 		utils.LoggerInstance.Error("Empty private key")
 		return nil
 	}
-	return privateKey.SignHash(msgHash)
+
+	sig := privateKey.s.SignHash(msgHash)
+	return &Signature{*sig}
 }
 
 // Verify 验证 BLS 签名
@@ -63,7 +64,7 @@ func Verify(publicKey *PublicKey, msgHash []byte, signature *Signature) bool {
 		return false
 	}
 
-	return signature.VerifyHash(publicKey, msgHash)
+	return signature.s.VerifyHash(&publicKey.p, msgHash)
 }
 
 // 聚合签名
@@ -79,19 +80,23 @@ func AggregateSignatures(signatures []*Signature) (*Signature, error) {
 		if signatures[i] == nil {
 			return nil, fmt.Errorf("signature at index %d is nil", i)
 		}
-		sigs[i] = *signatures[i]
+		sigs[i] = signatures[i].s
 	}
 
 	aggregatedSignature.Aggregate(sigs)
 
-	return &aggregatedSignature, nil
+	return &Signature{aggregatedSignature}, nil
 }
 
 // 验证聚合签名
 func VerifyAggregatedSignature(publicKeys []*PublicKey, msgHash []byte, aggSignature *Signature) bool {
 	pks := make([]bls.PublicKey, len(publicKeys))
 	for i := range publicKeys {
-		pks[i] = *publicKeys[i]
+		if publicKeys[i] == nil {
+			utils.LoggerInstance.Error("Empty public key at index %d", i)
+			return false
+		}
+		pks[i] = publicKeys[i].p
 	}
 
 	// 项目中聚合签名的场景是相同的消息，所以这里直接复制相同的消息
@@ -99,5 +104,5 @@ func VerifyAggregatedSignature(publicKeys []*PublicKey, msgHash []byte, aggSigna
 	for i := range pks {
 		hs[i] = msgHash
 	}
-	return aggSignature.VerifyAggregateHashes(pks, hs)
+	return aggSignature.s.VerifyAggregateHashes(pks, hs)
 }

@@ -13,15 +13,15 @@ func TestGenerateKeyPair(t *testing.T) {
 		sk, pk := GenerateKeyPair()
 		assert.NotNil(t, sk)
 		assert.NotNil(t, pk)
-		assert.False(t, sk.IsZero())
-		assert.False(t, pk.IsZero())
+		assert.False(t, sk.s.IsZero())
+		assert.False(t, pk.p.IsZero())
 	})
 
 	t.Run("should generate different key pairs each time", func(t *testing.T) {
 		sk1, pk1 := GenerateKeyPair()
 		sk2, pk2 := GenerateKeyPair()
-		assert.NotEqual(t, sk1.Serialize(), sk2.Serialize())
-		assert.NotEqual(t, pk1.Serialize(), pk2.Serialize())
+		assert.NotEqual(t, sk1.s.Serialize(), sk2.s.Serialize())
+		assert.NotEqual(t, pk1.p.Serialize(), pk2.p.Serialize())
 	})
 }
 
