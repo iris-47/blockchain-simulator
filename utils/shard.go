@@ -15,3 +15,14 @@ func Addr2Shard(addr config.Address) int {
 		return num % config.ShardNum
 	}
 }
+
+func GetNeighbours(IPs map[int]string, SelfIP string) []string {
+	neighbours := make([]string, 0)
+	for _, ip := range IPs {
+		if ip == SelfIP {
+			continue
+		}
+		neighbours = append(neighbours, ip)
+	}
+	return neighbours
+}

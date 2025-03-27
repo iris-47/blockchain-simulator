@@ -12,6 +12,7 @@ func Encode(object interface{}) []byte {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(object); err != nil {
+		LoggerInstance.Error("Error encoding the object: %v", err)
 		return nil
 	}
 	return buf.Bytes()

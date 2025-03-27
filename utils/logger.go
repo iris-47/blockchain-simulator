@@ -41,10 +41,9 @@ func NewLogger(args *config.Args, level string, toStdout bool, toFile bool) (*Lo
 	var err error
 
 	// check if the log path exists, if not, create it
-	if _, err := os.Stat(config.LogPath); os.IsNotExist(err) {
-		os.Mkdir(config.LogPath, os.ModePerm)
+	if toFile {
+		os.MkdirAll(config.LogPath, os.ModePerm)
 	}
-
 	// set the prefix and log file name according to the args
 	prefix := fmt.Sprintf("[S%dN%d]", args.ShardID, args.NodeID)
 	logFile := fmt.Sprintf("%sS%dN%d.log", config.LogPath, args.ShardID, args.NodeID)
