@@ -21,17 +21,11 @@ type DSCosensusMod struct {
 	// consensus related
 	view int // the nid of current view number
 	// malicious     bool // whether this node is malicious, has not implemented this feature
-	startTime time.Time
-	startLock sync.Mutex
+	startTime *utils.AtomicValue[time.Time]
 
 	// local sets
-	extrSet     *utils.Set[string] // 'extracted set' in the paper
-	commitValue string             // the value to commit
-}
-
-// used to synchronize the start time of the protocol
-type InitContent struct {
-	StartTime time.Time
+	ExtrSet     *utils.Set[string] // 'extracted set' in the paper
+	CommitValue string             // the value to commit
 }
 
 // the content with a list of signatures, not aggregate signature, used in DS protocol
@@ -48,9 +42,9 @@ func NewDSCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterf
 
 	dsMod.view = 0 // set 0 as the default view
 
-	dsMod.startLock = sync.Mutex{}
+	dsMod.startTime = utils.NewAtomicValue(time.Now())
 
-	dsMod.extrSet = utils.NewSet[string]()
+	dsMod.ExtrSet = utils.NewSet[string]()
 
 	return dsMod
 }
@@ -67,16 +61,16 @@ func (dsMod *DSCosensusMod) handleInitMsg(msg *message.Message) {
 	}
 
 	// set the start time of the protocol
-	dsMod.setStartTime(startTime)
-	utils.LoggerInstance.Info("Set the start time of the protocol to %v", dsMod.getStartTime())
+	dsMod.startTime.Set(startTime, nil)
+	utils.LoggerInstance.Info("Set the start time of the protocol to %v", dsMod.startTime.Get())
 
 	// clear the local sets
-	dsMod.extrSet.Clear()
+	dsMod.ExtrSet.Clear()
 
 	// wait until f + 1 round to commit
 	maliciousNodes := int64(config.MaliciousRatio * float64(config.NodeNum))
 	delayDuration := (maliciousNodes + 1) * config.TickInterval * int64(time.Millisecond)
-	commitTime := dsMod.getStartTime().Add(time.Duration(delayDuration))
+	commitTime := dsMod.startTime.Get().Add(time.Duration(delayDuration))
 	commitTimer := time.NewTimer(time.Until(commitTime))
 	utils.LoggerInstance.Debug("Set the commit time to %v", commitTime)
 	go func() {
@@ -85,16 +79,16 @@ func (dsMod *DSCosensusMod) handleInitMsg(msg *message.Message) {
 
 		// other commit operations
 
-		for _, item := range dsMod.extrSet.GetItems() {
-			utils.LoggerInstance.Info("The value in extrSet are: %v", item)
+		for _, item := range dsMod.ExtrSet.GetItems() {
+			utils.LoggerInstance.Info("The value in ExtrSet are: %v", item)
 		}
 
-		if dsMod.extrSet.Size() == 1 {
-			utils.LoggerInstance.Info("The value to commit is: %v", dsMod.extrSet.GetItems()[0])
-			dsMod.commitValue = dsMod.extrSet.GetItems()[0]
+		if dsMod.ExtrSet.Size() == 1 {
+			utils.LoggerInstance.Info("The value to commit is: %v", dsMod.ExtrSet.GetItems()[0])
+			dsMod.CommitValue = dsMod.ExtrSet.GetItems()[0]
 		} else {
-			utils.LoggerInstance.Warn("The extrSet size is %d, The value to commit is 0", dsMod.extrSet.Size())
-			dsMod.commitValue = "0"
+			utils.LoggerInstance.Warn("The ExtrSet size is %d, The value to commit is 0", dsMod.ExtrSet.Size())
+			dsMod.CommitValue = "0"
 		}
 
 		// if view node, wait another 1 interval and start the next consensus
@@ -116,14 +110,14 @@ func (dsMod *DSCosensusMod) handleProposeMsg(msg *message.Message) {
 		return
 	}
 
-	dsMod.extrSet.Add(string(req.Content))
+	dsMod.ExtrSet.Add(string(req.Content))
 
 	// view node does not need to forward the message
 	if dsMod.nodeAttr.Nid != dsMod.view {
 		utils.LoggerInstance.Debug("This node is not the view node, do not need to forward the message")
 		// wait until round==1 and broadcast Forward message
 		for {
-			if time.Since(dsMod.getStartTime()).Milliseconds()/config.TickInterval < int64(1) {
+			if time.Since(dsMod.startTime.Get()).Milliseconds()/config.TickInterval < int64(1) {
 				break
 			}
 			time.Sleep(time.Millisecond * 100)
@@ -143,7 +137,7 @@ func (dsMod *DSCosensusMod) handleProposeMsg(msg *message.Message) {
 	}
 }
 
-// check if the 'b' is already in the extrSet
+// check if the 'b' is already in the ExtrSet
 // check if the length of the signature list is equal to the round number
 // check if the signature list is correct
 // forward the message to everyone
@@ -158,12 +152,12 @@ func (dsMod *DSCosensusMod) handleForwardMsg(msg *message.Message) {
 	}
 
 	// get the round of the protocol
-	round := int(time.Since(dsMod.getStartTime()).Milliseconds() / config.TickInterval)
+	round := int(time.Since(dsMod.startTime.Get()).Milliseconds() / config.TickInterval)
 	sigLen := len(sigListContent.SigList)
 
-	// If ~b not belongs to extrSet: add ~b to extrSet and send fowared to everyone
-	if dsMod.extrSet.Contains(string(sigListContent.Req.Content)) {
-		utils.LoggerInstance.Info("The request is already in the extrSet")
+	// If ~b not belongs to ExtrSet: add ~b to ExtrSet and send fowared to everyone
+	if dsMod.ExtrSet.Contains(string(sigListContent.Req.Content)) {
+		utils.LoggerInstance.Info("The request is already in the ExtrSet")
 		return
 	} else {
 		if !dsMod.checkSigList(sigListContent.SigList) {
@@ -177,12 +171,12 @@ func (dsMod *DSCosensusMod) handleForwardMsg(msg *message.Message) {
 		}
 
 		// add the request to the local set C
-		utils.LoggerInstance.Info("Add the request to the extrSet")
-		dsMod.extrSet.Add(string(sigListContent.Req.Content))
+		utils.LoggerInstance.Info("Add the request to the ExtrSet")
+		dsMod.ExtrSet.Add(string(sigListContent.Req.Content))
 
 		// wait until round==sigLen and broadcast Forward message
 		for {
-			if time.Since(dsMod.getStartTime()).Milliseconds()/config.TickInterval < int64(sigLen) {
+			if time.Since(dsMod.startTime.Get()).Milliseconds()/config.TickInterval < int64(sigLen) {
 				break
 			}
 			time.Sleep(time.Millisecond * 100)
@@ -212,7 +206,7 @@ func (dsMod *DSCosensusMod) handleQueryMsg(msg *message.Message) {
 	// send the commit value to the query node
 	replyMsg := message.Message{
 		MsgType: message.MsgReplyQuery,
-		Content: utils.Encode(dsMod.commitValue),
+		Content: utils.Encode(dsMod.CommitValue),
 	}
 
 	dsMod.p2pMod.ConnMananger.Send(ip, replyMsg.JsonEncode())
@@ -229,4 +223,11 @@ func (dsMod *DSCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	// do nothing, all the operations are triggered by the messages
+}
+
+// check the signature of SigListContent
+// TODO: implement this function
+// 需要前置完成密钥广播模块，尚未完成
+func (dsMod *DSCosensusMod) checkSigList([]*signature.Signature) bool {
+	return true
 }
