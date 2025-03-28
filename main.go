@@ -3,50 +3,90 @@ package main
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/node"
-	"BlockChainSimulator/node/msgHandler"
 	"BlockChainSimulator/utils"
-	"flag"
 	"fmt"
+
+	"github.com/spf13/pflag"
 )
 
-func runNode1() {
-	utils.LoggerInstance, _ = utils.NewLogger("", utils.DEBUG, "S0N0", true)
-	node1, err := node.NewNode(0, 0, nil, msgHandler.PBFT, "simple", msgHandler.ProposeTxsAuxiliary)
-	if err != nil {
-		utils.LoggerInstance.Error("Error creating node: %v", err)
-		return
-	}
-	node1.Run()
-}
-
-func runNode2() {
-	utils.LoggerInstance, _ = utils.NewLogger("", utils.DEBUG, "S0N1", true)
-	node2, err := node.NewNode(0, 1, nil, msgHandler.PBFT, "simple", msgHandler.TestAuxiliary)
-	if err != nil {
-		utils.LoggerInstance.Error("Error creating node: %v", err)
-		return
-	}
-	node2.Run()
-}
-
 func main() {
-	if _, ok := config.IPMap[0]; !ok {
-		config.IPMap[0] = make(map[int]string)
-		config.IPMap[0][0] = "127.0.0.1:10001"
-		config.IPMap[0][1] = "127.0.0.1:10002"
-		config.IPMap[0][2] = "127.0.0.1:10003"
+	args := config.Args{}
+	// <-- Blockchain Config Related -->
+	blockchainFlags := pflag.NewFlagSet("Blockchain Config Related", pflag.ExitOnError)
+	blockchainFlags.IntVarP(&args.NodeID, "nodeID", "n", 0, "id of this node, for example, 0")
+	blockchainFlags.IntVarP(&args.NodeNum, "nodeNum", "N", 4, "indicate how many nodes of each shard are deployed")
+	blockchainFlags.IntVarP(&args.ShardID, "shardID", "s", 0, "id of the shard to which this node belongs, for example, 0")
+	blockchainFlags.IntVarP(&args.ShardNum, "shardNum", "S", 1, "indicate that how many shards are deployed")
+	blockchainFlags.IntVarP(&args.BlockSize, "blockSize", "b", 500, "how many Txs per block")
+	// <-- Running Config Related -->
+	runningFlags := pflag.NewFlagSet("Running Config Related", pflag.ExitOnError)
+	runningFlags.BoolVarP(&args.IsClient, "isClient", "c", false, "whether this node is a client")
+	runningFlags.BoolVarP(&args.IsDistribute, "isDistribute", "d", false, "whether the environment is distribute or local")
+	runningFlags.StringVarP(&args.ConsensusMethod, "consensusMethod", "m", "Monoxide", "choice fo consensus Method, for example, Monoxide")
+	runningFlags.StringVarP(&args.TxType, "txType", "t", "UTXO", "choice of TxType, for example, UTXO")
+	runningFlags.StringVarP(&args.LogLevel, "logLevel", "l", "INFO", "Set the log level of [DEBUG, INFO, WARN, ERROR]")
+	// <-- Client Config Related -->
+	clientFlags := pflag.NewFlagSet("Client Config Related", pflag.ExitOnError)
+	clientFlags.IntVarP(&args.TxInjectCount, "txInjectCount", "i", 80000, "how many txs to inject")
+	clientFlags.IntVarP(&args.TxInjectSpeed, "txInjectSpeed", "p", 100, "how many txs to inject per second")
+
+	pflag.CommandLine.AddFlagSet(blockchainFlags)
+	pflag.CommandLine.AddFlagSet(runningFlags)
+	pflag.CommandLine.AddFlagSet(clientFlags)
+
+	pflag.Usage = func() {
+		fmt.Println("Usage of application:")
+		fmt.Println("\nBlockchain Config Related:")
+		blockchainFlags.PrintDefaults()
+
+		fmt.Println("\nRunning Config Related:")
+		runningFlags.PrintDefaults()
+
+		fmt.Println("\nClient Config Related:")
+		clientFlags.PrintDefaults()
+	}
+	pflag.Parse()
+
+	config.InitConfig(&args)
+	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, true)
+
+	pcc := config.ChainConfig{
+		NodeID:    args.NodeID,
+		NodeNum:   args.NodeNum,
+		ShardID:   args.ShardID,
+		ShardNum:  args.ShardNum,
+		BlockSize: args.BlockSize,
 	}
 
-	// 通过参数控制启动Node1或Node2
-	task := flag.String("task", "node1", "task to run: node1 or node2")
-	flag.Parse()
+	var runningNode *node.Node
+	var err error
 
-	switch *task {
-	case "node1":
-		runNode1()
-	case "node2":
-		runNode2()
-	default:
-		fmt.Println("Unknown task")
+	// choose the running mods
+	if _, ok := PredefinedProtocolMods[args.ConsensusMethod]; !ok {
+		utils.LoggerInstance.Error("Method %v is not supported", args.ConsensusMethod)
+		return
 	}
+
+	if args.IsClient {
+		utils.LoggerInstance.Debug("This node is a client")
+		runningNode, err = node.NewNode(config.ClientShard, 0, &pcc, PredefinedProtocolMods[args.ConsensusMethod].clientMods)
+	} else if args.NodeID == config.ViewNodeId {
+		utils.LoggerInstance.Debug("This node is a view node")
+		runningNode, err = node.NewNode(args.ShardID, args.NodeID, &pcc, PredefinedProtocolMods[args.ConsensusMethod].viewNodeMods)
+	} else {
+		utils.LoggerInstance.Debug("This node is a normal node")
+		runningNode, err = node.NewNode(args.ShardID, args.NodeID, &pcc, PredefinedProtocolMods[args.ConsensusMethod].nodeMods)
+	}
+
+	if err != nil {
+		utils.LoggerInstance.Error("Error creating node: %v", err)
+		return
+	}
+
+	if runningNode == nil {
+		utils.LoggerInstance.Error("runningNode is nil")
+		return
+	}
+
+	runningNode.Run()
 }

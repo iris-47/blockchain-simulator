@@ -1,6 +1,7 @@
 package message
 
 import (
+	"BlockChainSimulator/signature"
 	"BlockChainSimulator/utils"
 	"crypto/sha256"
 	"encoding/json"
@@ -11,12 +12,12 @@ import (
 type RequestType int // what kind of request a consensus is proposing
 
 const (
-	ReqEmpty       RequestType = iota
-	ReqVerifyBlock             // the Content of the request is a block
-	ReqVerifyTxs               // the Content of the request is a list of transactions
-
-	// CShard
-	ReqVerifyInputs // the Content of the request is a list of UTXOs
+	ReqEmpty             RequestType = iota
+	ReqVerifyString                  // the Content of the request is a string
+	ReqVerifyBlock                   // the Content of the request is a block
+	ReqVerifyBlockHeader             // the Content of the request is a block header
+	ReqVerifyTxs                     // the Content of the request is a list of transactions
+	ReqVerifyInputs                  // the Content of the request is a list of UTXOs
 )
 
 // always indicate which kind of request a consensus is proposing
@@ -26,6 +27,8 @@ type Request struct {
 	Content []byte    // the request body, e.g., the block to be verified
 	ReqTime time.Time // the time when the request is created
 	Digest  [32]byte  // hash of the request
+
+	Sig *signature.Signature // the signature of the request, optional
 }
 
 func NewRequest(shardId int, reqType RequestType, content []byte) *Request {
@@ -34,6 +37,19 @@ func NewRequest(shardId int, reqType RequestType, content []byte) *Request {
 		ReqType: reqType,
 		Content: content,
 		ReqTime: time.Now(),
+	}
+	request.CalDigest()
+	return &request
+}
+
+// signature is added to the project midway, so we need a new constructor and maitain the old one
+func NewRequestWithSignature(shardId int, reqType RequestType, content []byte, sig *signature.Signature) *Request {
+	request := Request{
+		ShardId: shardId,
+		ReqType: reqType,
+		Content: content,
+		ReqTime: time.Now(),
+		Sig:     sig,
 	}
 	request.CalDigest()
 	return &request

@@ -31,12 +31,17 @@ var (
 
 // config of the running environment
 var (
-	NodeNum       = 4         // total number of nodes in a shard
-	ShardNum      = 1         // total number of shards, default no sharding
-	ViewNodeId    = 0         // the nodeID of the initial view nodes
-	LogLevel      = "INFO"    // default log level
-	IsDistributed = false     // Running in local environment or not
-	ClientShard   = 0xfffffff // the shardID of the client
+	NodeNum                = 4         // total number of nodes in a shard
+	ShardNum               = 1         // total number of shards, default no sharding
+	MaliciousRatio float64 = 1. / 3    // the ratio of malicious nodes in the network
+	ViewNodeId             = 0         // the nodeID of the initial view nodes
+	LogLevel               = "INFO"    // default log level
+	IsDistributed          = false     // Running in local environment or not
+	ClientShard            = 0xfffffff // the shardID of the client
+
+	// used to synchronize the start time of the protocol in some protocol using synchronous network model like TBB and DS
+	StartTimeWait int64 = 1000 // the start time of the protocol(ms)
+	TickInterval  int64 = 1000 // the interval between each clock(ms)
 
 	StoragePath = "./blockchain_data/"                                            // the path to store the blockchain data
 	ResultPath  = "./result/"                                                     // measurement data result output path

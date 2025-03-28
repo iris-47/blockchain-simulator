@@ -1,4 +1,4 @@
-package auxiliaryMod
+package consensusMod
 
 import (
 	"BlockChainSimulator/config"

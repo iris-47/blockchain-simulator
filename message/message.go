@@ -17,23 +17,28 @@ type Message struct {
 
 const (
 	MsgEmpty MessageType = iota
-	// Global
-	MsgNodeReady // a node is ready to receive messages
-	MsgStop      // stop the node
-	MsgInject    // inject the Txs data(always from the client) to the system
-	MsgReply     // send the verified requests back to the client
+	// Client-related
+	MsgInit       // to inform a node to get ready
+	MsgNodeReady  // to notify a node is ready
+	MsgStop       // to stop a node
+	MsgInject     // to inject the transactions data(or request) to the consensus system
+	MsgReply      // to active send something to the client
+	MsgQuery      // to query the status/value of the blockchian system
+	MsgReplyQuery // to reply the query message
 
-	// PBFT
+	// Protocol-related
 	MsgPropose
 	MsgPrePrepare
 	MsgPrepare
 	MsgCommit
+	MsgFoward        // to forward the message to another node
+	MsgConsensusDone // to notify the consensus is done
 
-	// Request for old sequence
+	// Sync-related
 	MsgRequestSeq
 	MsgSeq
 
-	// CShard
+	// CShard protocol
 	MsgInputVerifyResult // L sends the result of input verification to LL
 	MsgPreInject         // used to pre-inject the data to the system
 	MsgBlockLegal        // a legal block, used to store the block

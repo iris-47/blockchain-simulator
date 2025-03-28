@@ -1,5 +1,5 @@
 // Abandoned
-package consensusmod
+package consensusMod
 
 // Just a rant: in some ways, Go really doesn't measure up to C++. The lack of inheritance and polymorphism
 

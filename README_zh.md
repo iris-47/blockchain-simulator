@@ -14,6 +14,39 @@
 
 该平台的模块化设计，方便替换和集成不同的共识协议，灵活支持各种区块链实验和测试。
 
+## 使用方法
+
+### 添加自定义协议
+1. 在 `node/runningMod` 目录下实现您的节点行为模块
+2. 在 `protocols.go` 中注册新的协议组合
+3. 详细指南请参考 [node/runningMod/README_zh.md](node/runningMod/README_zh.md)
+
+### 配置文件
+所有配置参数可通过命令行或配置文件`config/config.go`设置。
+
+## 快速开始
+
+### 1. 编译项目
+```bash
+go build
+```
+> **注意**：本项目依赖 `github.com/herumi/bls-go-binary/bls` 库，建议编译后运行以获得最佳性能
+### 2. 启动节点
+```bash
+# 启动客户端
+./BlockChainSimulator -c -m "TBB"
+```
+### 3. 系统控制
+客户端节点启动后将自动初始化整个网络
+
+使用 `Ctrl+C` 关闭客户端，并关闭区块链网络
+
+意外情况使用 `./kill.sh` 强行关闭所有节点
+
+区块链数据保存在 blockchain_data/
+
+运行日志保存在 log/
+
 ## 项目特点
 
 - **支持多种交易模型**：包括 UTXO 模型、Account 模型，以及自定义智能合约交易。

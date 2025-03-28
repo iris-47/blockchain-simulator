@@ -14,6 +14,36 @@ I am a graduate student, and this is a blockchain simulation platform built for 
 
 The platform's modular design allows easy swapping and integration of various consensus protocols, making it flexible for blockchain experiments and testing.
 
+## Usage
+
+### Adding Custom Protocols
+1. Implement node modules in `node/runningMod`
+2. Register new protocol combinations in `protocols.go`
+3. See [node/runningMod/README.md](node/runningMod/README_zh.md) for development guide
+
+## Quick Start
+
+### 1. Build Project
+```bash
+go build
+```
+> **Note**: Requires `github.com/herumi/bls-go-binary/bls`, recommended to build before running
+### 2. 启动节点
+```bash
+# Start client node (controller)
+./BlockChainSimulator -c -m "TBB"
+```
+### 3. System Control
+Client node will bootstrap the network
+
+Use `Ctrl+C` for shutdown client and automatically shutdown the network
+
+In case of unexpected failures, forcefully terminate all nodes using `./kill.sh`
+
+Blockchain data: `blockchain_data/`
+
+Log files: `log/`
+
 ## Key Features
 
 - **Support for Multiple Transaction Models**: Includes UTXO, Account, and custom smart contract transactions.
