@@ -1,7 +1,6 @@
 package signature
 
 import (
-	"crypto/sha256"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,23 +27,22 @@ func TestGenerateKeyPair(t *testing.T) {
 func TestSignAndVerify(t *testing.T) {
 	sk, pk := GenerateKeyPair()
 	msg := []byte("test message")
-	hash := sha256.Sum256(msg)
 
 	t.Run("valid signature should verify", func(t *testing.T) {
-		sig := Sign(sk, hash[:])
-		assert.True(t, Verify(pk, hash[:], sig))
+		sig := Sign(sk, msg)
+		assert.True(t, Verify(pk, msg, sig))
 	})
 
 	t.Run("invalid message should fail verification", func(t *testing.T) {
-		sig := Sign(sk, hash[:])
-		wrongHash := sha256.Sum256([]byte("wrong message"))
-		assert.False(t, Verify(pk, wrongHash[:], sig))
+		sig := Sign(sk, msg)
+		wrongMsg := []byte("wrong message")
+		assert.False(t, Verify(pk, wrongMsg, sig))
 	})
 
 	t.Run("invalid public key should fail verification", func(t *testing.T) {
-		sig := Sign(sk, hash[:])
+		sig := Sign(sk, msg)
 		_, wrongPk := GenerateKeyPair()
-		assert.False(t, Verify(wrongPk, hash[:], sig))
+		assert.False(t, Verify(wrongPk, msg, sig))
 	})
 
 	t.Run("empty message should handle gracefully", func(t *testing.T) {
@@ -55,15 +53,14 @@ func TestSignAndVerify(t *testing.T) {
 
 func TestAggregateSignatures(t *testing.T) {
 	msg := []byte("aggregate test")
-	hash := sha256.Sum256(msg)
 
 	t.Run("should aggregate single signature", func(t *testing.T) {
 		sk, pk := GenerateKeyPair()
-		sig := Sign(sk, hash[:])
+		sig := Sign(sk, msg)
 
 		aggSig, err := AggregateSignatures([]*Signature{sig})
 		require.NoError(t, err)
-		assert.True(t, VerifyAggregatedSignature([]*PublicKey{pk}, hash[:], aggSig))
+		assert.True(t, VerifyAggregatedSignature([]*PublicKey{pk}, msg, aggSig))
 	})
 
 	t.Run("should aggregate multiple signatures", func(t *testing.T) {
@@ -74,12 +71,12 @@ func TestAggregateSignatures(t *testing.T) {
 
 		for i := 0; i < n; i++ {
 			sks[i], pks[i] = GenerateKeyPair()
-			sigs[i] = Sign(sks[i], hash[:])
+			sigs[i] = Sign(sks[i], msg)
 		}
 
 		aggSig, err := AggregateSignatures(sigs)
 		require.NoError(t, err)
-		assert.True(t, VerifyAggregatedSignature(pks, hash[:], aggSig))
+		assert.True(t, VerifyAggregatedSignature(pks, msg, aggSig))
 	})
 
 	t.Run("empty signatures should return error", func(t *testing.T) {
@@ -90,56 +87,51 @@ func TestAggregateSignatures(t *testing.T) {
 	t.Run("should detect invalid aggregated signature", func(t *testing.T) {
 		sk1, _ := GenerateKeyPair()
 		_, pk2 := GenerateKeyPair() // different key not used for signing
-		sig := Sign(sk1, hash[:])
+		sig := Sign(sk1, msg)
 
 		aggSig, err := AggregateSignatures([]*Signature{sig})
 		require.NoError(t, err)
-		assert.False(t, VerifyAggregatedSignature([]*PublicKey{pk2}, hash[:], aggSig))
+		assert.False(t, VerifyAggregatedSignature([]*PublicKey{pk2}, msg, aggSig))
 	})
 }
 
 func TestEdgeCases(t *testing.T) {
 	t.Run("nil secret key should return nil on Sign", func(t *testing.T) {
 		msg := []byte("test")
-		hash := sha256.Sum256(msg)
-		assert.Nil(t, Sign(nil, hash[:]))
+		assert.Nil(t, Sign(nil, msg))
 	})
 
 	t.Run("nil public key should return false on verify", func(t *testing.T) {
 		sk, _ := GenerateKeyPair()
 		msg := []byte("test")
-		hash := sha256.Sum256(msg)
-		sig := Sign(sk, hash[:])
-		assert.False(t, Verify(nil, hash[:], sig))
+		sig := Sign(sk, msg)
+		assert.False(t, Verify(nil, msg, sig))
 	})
 
 	t.Run("nil signature should return false on verify", func(t *testing.T) {
 		_, pk := GenerateKeyPair()
 		msg := []byte("test")
-		hash := sha256.Sum256(msg)
-		assert.False(t, Verify(pk, hash[:], nil))
+		assert.False(t, Verify(pk, msg, nil))
 	})
 }
 
 func BenchmarkSign(b *testing.B) {
 	sk, _ := GenerateKeyPair()
 	msg := []byte("benchmark message")
-	hash := sha256.Sum256(msg)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = Sign(sk, hash[:])
+		_ = Sign(sk, msg)
 	}
 }
 
 func BenchmarkVerify(b *testing.B) {
 	sk, pk := GenerateKeyPair()
 	msg := []byte("benchmark message")
-	hash := sha256.Sum256(msg)
-	sig := Sign(sk, hash[:])
+	sig := Sign(sk, msg)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = Verify(pk, hash[:], sig)
+		_ = Verify(pk, msg, sig)
 	}
 }

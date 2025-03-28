@@ -3,6 +3,7 @@ package signature
 
 import (
 	"BlockChainSimulator/utils"
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/herumi/bls-go-binary/bls"
@@ -27,13 +28,13 @@ func GenerateKeyPair() (*SecretKey, *PublicKey) {
 }
 
 // 生成 BLS 签名，注意msgHash必须由sha256.Sum256生成，否则会没有报错地闪退，原因未知（摊手
-func Sign(privateKey *SecretKey, msgHash []byte) *Signature {
-	if len(msgHash) == 0 {
-		utils.LoggerInstance.Error("Empty message hash")
+func Sign(privateKey *SecretKey, msg []byte) *Signature {
+	if len(msg) == 0 {
+		utils.LoggerInstance.Error("Empty message")
 		return nil
 	}
-	if msgHash == nil {
-		utils.LoggerInstance.Error("Nil message hash")
+	if msg == nil {
+		utils.LoggerInstance.Error("Nil message")
 		return nil
 	}
 	if privateKey == nil {
@@ -41,18 +42,20 @@ func Sign(privateKey *SecretKey, msgHash []byte) *Signature {
 		return nil
 	}
 
-	sig := privateKey.s.SignHash(msgHash)
+	msgHash := sha256.Sum256(msg)
+
+	sig := privateKey.s.SignHash(msgHash[:])
 	return &Signature{*sig}
 }
 
 // Verify 验证 BLS 签名
-func Verify(publicKey *PublicKey, msgHash []byte, signature *Signature) bool {
-	if len(msgHash) == 0 {
-		utils.LoggerInstance.Error("Empty message hash")
+func Verify(publicKey *PublicKey, msg []byte, signature *Signature) bool {
+	if len(msg) == 0 {
+		utils.LoggerInstance.Error("Empty message")
 		return false
 	}
-	if msgHash == nil {
-		utils.LoggerInstance.Error("Nil message hash")
+	if msg == nil {
+		utils.LoggerInstance.Error("Nil message")
 		return false
 	}
 	if publicKey == nil {
@@ -64,7 +67,9 @@ func Verify(publicKey *PublicKey, msgHash []byte, signature *Signature) bool {
 		return false
 	}
 
-	return signature.s.VerifyHash(&publicKey.p, msgHash)
+	msgHash := sha256.Sum256(msg)
+
+	return signature.s.VerifyHash(&publicKey.p, msgHash[:])
 }
 
 // 聚合签名
@@ -89,8 +94,9 @@ func AggregateSignatures(signatures []*Signature) (*Signature, error) {
 }
 
 // 验证聚合签名
-func VerifyAggregatedSignature(publicKeys []*PublicKey, msgHash []byte, aggSignature *Signature) bool {
+func VerifyAggregatedSignature(publicKeys []*PublicKey, msg []byte, aggSignature *Signature) bool {
 	pks := make([]bls.PublicKey, len(publicKeys))
+	msgHash := sha256.Sum256(msg)
 	for i := range publicKeys {
 		if publicKeys[i] == nil {
 			utils.LoggerInstance.Error("Empty public key at index %d", i)
@@ -102,7 +108,7 @@ func VerifyAggregatedSignature(publicKeys []*PublicKey, msgHash []byte, aggSigna
 	// 项目中聚合签名的场景是相同的消息，所以这里直接复制相同的消息
 	hs := make([][]byte, len(pks))
 	for i := range pks {
-		hs[i] = msgHash
+		hs[i] = msgHash[:]
 	}
 	return aggSignature.s.VerifyAggregateHashes(pks, hs)
 }
