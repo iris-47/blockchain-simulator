@@ -32,7 +32,7 @@ func NewProposeStringAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runn
 	sam.p2pMod = p2p
 
 	sam.stringQueue = utils.NewQueue[string]()
-	sam.consensusDone = make(chan struct{})
+	sam.consensusDone = make(chan struct{}, 1)
 
 	return sam
 }
@@ -53,7 +53,11 @@ func (sam *ProposeStringAuxiliaryMod) handleInject(msg *message.Message) {
 }
 
 func (sam *ProposeStringAuxiliaryMod) handleConsensusDone(_ *message.Message) {
-	sam.consensusDone <- struct{}{}
+	// non-blocking send to the channel
+	select {
+	case sam.consensusDone <- struct{}{}:
+	default:
+	}
 }
 
 func (sam *ProposeStringAuxiliaryMod) RegisterHandlers() {
@@ -103,10 +107,25 @@ func (sam *ProposeStringAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGrou
 				MsgType: message.MsgPropose,
 				Content: utils.Encode(req),
 			}
-			utils.LoggerInstance.Info("Broadcast the propose message")
-			sam.p2pMod.ConnMananger.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), proposeMsg.JsonEncode())
-			sam.p2pMod.MsgHandlerMap[message.MsgPropose](&proposeMsg)
 
+			badViewNode := true
+
+			if badViewNode {
+				badproposeMsg := message.Message{
+					MsgType: message.MsgPropose,
+					Content: utils.Encode(message.NewRequestWithSignature(sam.nodeAttr.Sid, message.ReqVerifyString, []byte("bad"), sig)),
+				}
+				utils.LoggerInstance.Info("Broadcast the propose message")
+				// sam.p2pMod.ConnMananger.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), proposeMsg.JsonEncode())
+				sam.p2pMod.MsgHandlerMap[message.MsgPropose](&proposeMsg)
+
+				sam.p2pMod.ConnMananger.Send(config.IPMap[0][1], badproposeMsg.JsonEncode())
+				sam.p2pMod.ConnMananger.Send(config.IPMap[0][2], badproposeMsg.JsonEncode())
+			} else {
+				utils.LoggerInstance.Info("Broadcast the propose message")
+				sam.p2pMod.ConnMananger.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), proposeMsg.JsonEncode())
+				sam.p2pMod.MsgHandlerMap[message.MsgPropose](&proposeMsg)
+			}
 			// wait for the consensus to be done
 			select {
 			case <-sam.consensusDone:

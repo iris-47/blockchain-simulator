@@ -31,7 +31,11 @@ const (
 	MsgPrePrepare
 	MsgPrepare
 	MsgCommit
-	MsgFoward        // to forward the message to another node
+	MsgForward // to forward the message to another node, has different meaning in different protocols
+	MsgForward1
+	MsgForward2
+	MsgVote          // to vote
+	MsgQC            // to send the quorum certificate
 	MsgConsensusDone // to notify the consensus is done
 
 	// Sync-related

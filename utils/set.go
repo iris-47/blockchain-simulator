@@ -54,6 +54,16 @@ func (s *Set[T]) GetItems() []T {
 	return keys
 }
 
+func (s *Set[T]) GetItemRefs() []*T {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	keys := make([]*T, 0, len(s.data))
+	for k := range s.data {
+		keys = append(keys, &k)
+	}
+	return keys
+}
+
 func (s *Set[T]) Union(other *Set[T]) *Set[T] {
 	result := NewSet[T]()
 

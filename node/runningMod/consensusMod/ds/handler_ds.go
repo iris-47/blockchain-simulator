@@ -50,7 +50,7 @@ func NewDSCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterf
 }
 
 // Initially, every node i's extracted set extri=0.
-func (dsMod *DSCosensusMod) handleInitMsg(msg *message.Message) {
+func (dsMod *DSCosensusMod) HandleInitMsg(msg *message.Message) {
 	utils.LoggerInstance.Info("Received an init message")
 
 	startTime := time.Time{}
@@ -90,17 +90,21 @@ func (dsMod *DSCosensusMod) handleInitMsg(msg *message.Message) {
 			utils.LoggerInstance.Warn("The ExtrSet size is %d, The value to commit is 0", dsMod.ExtrSet.Size())
 			dsMod.CommitValue = "0"
 		}
-
-		// if view node, wait another 1 interval and start the next consensus
-		if dsMod.nodeAttr.Nid == dsMod.view {
-			time.Sleep(time.Duration(config.TickInterval) * time.Millisecond)
-			dsMod.p2pMod.MsgHandlerMap[message.MsgConsensusDone](nil)
-		}
 	}()
+
+	// if view node, set consensus done timer
+	if dsMod.nodeAttr.Nid == dsMod.view {
+		consensusDoneTimer := time.NewTimer(time.Duration(config.TickInterval*int64(config.NodeNum+7)) * time.Millisecond)
+		go func() {
+			<-consensusDoneTimer.C
+			utils.LoggerInstance.Info("The consensus is done, start the next round")
+			dsMod.p2pMod.MsgHandlerMap[message.MsgConsensusDone](nil)
+		}()
+	}
 }
 
 // handle the propose message, the message is sent by the view node
-func (dsMod *DSCosensusMod) handleProposeMsg(msg *message.Message) {
+func (dsMod *DSCosensusMod) HandleProposeMsg(msg *message.Message) {
 	utils.LoggerInstance.Info("Received a propose message")
 
 	req := message.Request{}
@@ -114,7 +118,6 @@ func (dsMod *DSCosensusMod) handleProposeMsg(msg *message.Message) {
 
 	// view node does not need to forward the message
 	if dsMod.nodeAttr.Nid != dsMod.view {
-		utils.LoggerInstance.Debug("This node is not the view node, do not need to forward the message")
 		// wait until round==1 and broadcast Forward message
 		for {
 			if time.Since(dsMod.startTime.Get()).Milliseconds()/config.TickInterval < int64(1) {
@@ -129,7 +132,7 @@ func (dsMod *DSCosensusMod) handleProposeMsg(msg *message.Message) {
 			NodeList: []int{dsMod.view, dsMod.nodeAttr.Nid},
 		}
 		forwardMsg := message.Message{
-			MsgType: message.MsgFoward,
+			MsgType: message.MsgForward,
 			Content: utils.Encode(sigListContent),
 		}
 		dsMod.p2pMod.ConnMananger.Broadcast(dsMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], dsMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
@@ -141,7 +144,7 @@ func (dsMod *DSCosensusMod) handleProposeMsg(msg *message.Message) {
 // check if the length of the signature list is equal to the round number
 // check if the signature list is correct
 // forward the message to everyone
-func (dsMod *DSCosensusMod) handleForwardMsg(msg *message.Message) {
+func (dsMod *DSCosensusMod) HandleForwardMsg(msg *message.Message) {
 	utils.LoggerInstance.Debug("Received a forward message")
 
 	sigListContent := SigListContent{}
@@ -186,7 +189,7 @@ func (dsMod *DSCosensusMod) handleForwardMsg(msg *message.Message) {
 		sigListContent.NodeList = append(sigListContent.NodeList, dsMod.nodeAttr.Nid)
 
 		forwardMsg := message.Message{
-			MsgType: message.MsgFoward,
+			MsgType: message.MsgForward,
 			Content: utils.Encode(sigListContent),
 		}
 
@@ -213,9 +216,9 @@ func (dsMod *DSCosensusMod) handleQueryMsg(msg *message.Message) {
 }
 
 func (dsMod *DSCosensusMod) RegisterHandlers() {
-	dsMod.p2pMod.RegisterHandler(message.MsgInit, dsMod.handleInitMsg)
-	dsMod.p2pMod.RegisterHandler(message.MsgPropose, dsMod.handleProposeMsg)
-	dsMod.p2pMod.RegisterHandler(message.MsgFoward, dsMod.handleForwardMsg)
+	dsMod.p2pMod.RegisterHandler(message.MsgInit, dsMod.HandleInitMsg)
+	dsMod.p2pMod.RegisterHandler(message.MsgPropose, dsMod.HandleProposeMsg)
+	dsMod.p2pMod.RegisterHandler(message.MsgForward, dsMod.HandleForwardMsg)
 	dsMod.p2pMod.RegisterHandler(message.MsgQuery, dsMod.handleQueryMsg)
 }
 

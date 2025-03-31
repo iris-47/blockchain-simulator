@@ -36,6 +36,9 @@ const (
 	MeasureMod     string = "measure" // used by the client to measure the performance of the system
 	QueryMod       string = "query"   // used by the client to query the consensus result
 
+	// used by TBB protocol
+	QueryTBBMod string = "queryTBB" // used by the client to query the consensus result
+
 	// add more send type here
 	SendMimicContractTxsMod string = "sendMimicContractTxs" // used by the client to send mimic contract txs
 	SendStringManualMod     string = "sendStringManual"     // used by the client to send a string manually
@@ -61,6 +64,7 @@ func init() {
 	runningModRegistry[TestMod] = clientMod.NewTestAuxiliaryMod
 	runningModRegistry[MeasureMod] = clientMod.NewMeasureMod
 	runningModRegistry[QueryMod] = clientMod.NewQueryMod
+	runningModRegistry[QueryTBBMod] = clientMod.NewQueryTBBMod
 	runningModRegistry[StartSystemMod] = clientMod.NewStartSystemAuxiliaryMod
 	runningModRegistry[SendMimicContractTxsMod] = clientMod.NewSendMimicContractTxsMod
 	runningModRegistry[SendStringManualMod] = clientMod.NewSendStringManualMod
