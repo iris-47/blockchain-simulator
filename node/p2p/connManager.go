@@ -47,7 +47,13 @@ func (conm *ConnMananger) Send(addr string, context []byte) {
 		return
 	}
 
-	conn := pool.Get().(net.Conn)
+	rawConn := pool.Get()
+	conn, ok := rawConn.(net.Conn)
+	if !ok {
+		utils.LoggerInstance.Error("Failed to assert connection from pool")
+		return
+	}
+
 	defer pool.Put(conn)
 
 	_, err := conn.Write(append(context, '\n'))
