@@ -108,9 +108,7 @@ func (sam *ProposeStringAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGrou
 				Content: utils.Encode(req),
 			}
 
-			badViewNode := true
-
-			if badViewNode {
+			if config.IsMalicious {
 				badproposeMsg := message.Message{
 					MsgType: message.MsgPropose,
 					Content: utils.Encode(message.NewRequestWithSignature(sam.nodeAttr.Sid, message.ReqVerifyString, []byte("bad"), sig)),

@@ -12,8 +12,13 @@ type Args struct {
 	BlockSize int // how many Txs per block
 
 	// <-- Running Config Related -->
-	IsClient        bool   // whether this node is a client
-	IsDistribute    bool   // whether the environment is distribute or local
+	IsClient     bool // whether this node is a client
+	IsDistribute bool // whether the environment is distribute or local
+
+	MaliciousRatio float64 // the ratio of malicious nodes in the network
+	ResilientRatio float64 // the ratio of resilient nodes in the network
+	IsMalicious    bool    // whether this node is malicious
+
 	ConsensusMethod string // choice fo consensus Method, for example, CShard
 	TxType          string // choice of TxType, for example, UTXO
 	LogLevel        string // Set the log level of [DEBUG, INFO, WARN, ERROR]

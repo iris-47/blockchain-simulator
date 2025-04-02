@@ -31,10 +31,11 @@ const (
 
 // Running mod used by client
 const (
-	TestMod        string = "test"
-	StartSystemMod string = "start"   // used by the client to start the system
-	MeasureMod     string = "measure" // used by the client to measure the performance of the system
-	QueryMod       string = "query"   // used by the client to query the consensus result
+	TestMod             string = "test"
+	StartLocalSystemMod string = "startlocal" // used by the client to start the local system, support local environment only
+	StopSystemMod       string = "stop"       // used by the client to stop the local system, support both local and distributed environment
+	MeasureMod          string = "measure"    // used by the client to measure the performance of the system
+	QueryMod            string = "query"      // used by the client to query the consensus result
 
 	// used by TBB protocol
 	QueryTBBMod string = "queryTBB" // used by the client to query the consensus result
@@ -65,7 +66,8 @@ func init() {
 	runningModRegistry[MeasureMod] = clientMod.NewMeasureMod
 	runningModRegistry[QueryMod] = clientMod.NewQueryMod
 	runningModRegistry[QueryTBBMod] = clientMod.NewQueryTBBMod
-	runningModRegistry[StartSystemMod] = clientMod.NewStartSystemAuxiliaryMod
+	runningModRegistry[StartLocalSystemMod] = clientMod.NewStartLocalSystemAuxiliaryMod
+	runningModRegistry[StopSystemMod] = clientMod.NewStopSystemAuxiliaryMod
 	runningModRegistry[SendMimicContractTxsMod] = clientMod.NewSendMimicContractTxsMod
 	runningModRegistry[SendStringManualMod] = clientMod.NewSendStringManualMod
 }

@@ -32,7 +32,8 @@ type TBBCosensusMod struct {
 	localSetC *utils.Set[string] // set 'C' in the paper, used by DS protocol
 	localSetD []string           // set 'D' in the paper, to store the 3 commit point values
 
-	referenceValue string // the reference value for the next step
+	referenceValue1 string // the reference value for the next step
+	referenceValue2 string // the reference value for the next step
 
 	isCommit bool // whether any commit point is reached
 }
@@ -45,7 +46,7 @@ type SigListContent struct {
 }
 
 type ReplyValue struct {
-	SetD  []string
+	Value string
 	QCMap map[string]*signature.Signature
 }
 
@@ -65,7 +66,8 @@ func NewTBBCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInter
 	tbbMod.localSetC = tbbMod.DSMod.ExtrSet
 	tbbMod.localSetD = make([]string, 3) // set D to store the 3 commit point values
 
-	tbbMod.referenceValue = ""
+	tbbMod.referenceValue1 = ""
+	tbbMod.referenceValue2 = ""
 
 	tbbMod.isCommit = false
 
@@ -89,10 +91,9 @@ func (tbbMod *TBBCosensusMod) handleInitMsg(msg *message.Message) {
 	utils.LoggerInstance.Info("Set the start time of the protocol to %v", tbbMod.startTime.Get())
 
 	// clear the local sets
-	tbbMod.localSetA = utils.NewSet[string]()
-	tbbMod.localSetC = utils.NewSet[string]()
 	tbbMod.localSetD = make([]string, 3)
-	tbbMod.referenceValue = ""
+	tbbMod.referenceValue1 = ""
+	tbbMod.referenceValue2 = ""
 	tbbMod.isCommit = false
 
 	// init two sub-modules
@@ -102,13 +103,13 @@ func (tbbMod *TBBCosensusMod) handleInitMsg(msg *message.Message) {
 	t1 := int(float64(config.NodeNum)*config.ResilientRatio) - 1
 	t2 := config.NodeNum - 1
 
-	checkPoint1Timer := time.NewTimer(time.Duration(int64(t1+1)*config.TickInterval) * time.Millisecond)
-	checkPoint2Timer := time.NewTimer(time.Duration(int64(t2+1)*config.TickInterval) * time.Millisecond)
-	commitPoint2Timer := time.NewTimer(time.Duration(int64(t1+6)*config.TickInterval) * time.Millisecond)
-	commitPoint3Timer := time.NewTimer(time.Duration(int64(t2+6)*config.TickInterval) * time.Millisecond)
+	checkPoint1Timer := time.NewTimer(time.Until(startTime.Add(time.Duration(int64(t1+1)*config.TickInterval) * time.Millisecond)))
+	checkPoint2Timer := time.NewTimer(time.Until(startTime.Add(time.Duration(int64(t2+1)*config.TickInterval) * time.Millisecond)))
+	commitPoint2Timer := time.NewTimer(time.Until(startTime.Add(time.Duration(int64(t1+6)*config.TickInterval) * time.Millisecond)))
+	commitPoint3Timer := time.NewTimer(time.Until(startTime.Add(time.Duration(int64(t2+6)*config.TickInterval) * time.Millisecond)))
 
-	go tbbMod.referencePointHandler(*checkPoint1Timer)
-	go tbbMod.referencePointHandler(*checkPoint2Timer)
+	go tbbMod.referencePoint1Handler(*checkPoint1Timer)
+	go tbbMod.referencePoint2Handler(*checkPoint2Timer)
 	go tbbMod.commitPoint1Handler()
 	go tbbMod.commitPoint2Handler(*commitPoint2Timer)
 	go tbbMod.commitPoint3Handler(*commitPoint3Timer)
@@ -149,8 +150,16 @@ func (tbbMod *TBBCosensusMod) handleQueryMsg(msg *message.Message) {
 		return
 	}
 
+	value := ""
+	for _, item := range tbbMod.localSetD {
+		if item != "" {
+			value = item
+			break
+		}
+	}
+
 	replyValue := ReplyValue{
-		SetD:  tbbMod.localSetD,
+		Value: value,
 		QCMap: tbbMod.DBBMod.QCMap,
 	}
 
@@ -164,14 +173,26 @@ func (tbbMod *TBBCosensusMod) handleQueryMsg(msg *message.Message) {
 }
 
 func (tbbMod *TBBCosensusMod) RegisterHandlers() {
-	tbbMod.p2pMod.RegisterHandler(message.MsgInit, tbbMod.handleInitMsg)
-	tbbMod.p2pMod.RegisterHandler(message.MsgPropose, tbbMod.handleProposeMsg)
-	tbbMod.p2pMod.RegisterHandler(message.MsgForward, tbbMod.handleForwardMsg)
-	tbbMod.p2pMod.RegisterHandler(message.MsgForward1, tbbMod.handleForward1Msg)
-	tbbMod.p2pMod.RegisterHandler(message.MsgForward2, tbbMod.handleForward2Msg)
-	tbbMod.p2pMod.RegisterHandler(message.MsgVote, tbbMod.handleVoteMsg)
-	tbbMod.p2pMod.RegisterHandler(message.MsgQC, tbbMod.handleQCMsg)
-	tbbMod.p2pMod.RegisterHandler(message.MsgQuery, tbbMod.handleQueryMsg)
+	if config.IsMalicious && tbbMod.nodeAttr.Nid != config.ViewNodeId { // malicious view node still needs to register the handlers, but sends wrong propose
+		tbbMod.p2pMod.RegisterHandler(message.MsgInit, tbbMod.handleInitMsg_m)
+		tbbMod.p2pMod.RegisterHandler(message.MsgPropose, tbbMod.handleProposeMsg_m)
+		tbbMod.p2pMod.RegisterHandler(message.MsgForward, tbbMod.handleForwardMsg_m)
+		tbbMod.p2pMod.RegisterHandler(message.MsgForward1, tbbMod.handleForward1Msg_m)
+		tbbMod.p2pMod.RegisterHandler(message.MsgForward2, tbbMod.handleForward2Msg_m)
+		tbbMod.p2pMod.RegisterHandler(message.MsgVote, tbbMod.handleVoteMsg_m)
+		tbbMod.p2pMod.RegisterHandler(message.MsgQC, tbbMod.handleQCMsg_m)
+		tbbMod.p2pMod.RegisterHandler(message.MsgQuery, tbbMod.handleQueryMsg_m)
+
+	} else {
+		tbbMod.p2pMod.RegisterHandler(message.MsgInit, tbbMod.handleInitMsg)
+		tbbMod.p2pMod.RegisterHandler(message.MsgPropose, tbbMod.handleProposeMsg)
+		tbbMod.p2pMod.RegisterHandler(message.MsgForward, tbbMod.handleForwardMsg)
+		tbbMod.p2pMod.RegisterHandler(message.MsgForward1, tbbMod.handleForward1Msg)
+		tbbMod.p2pMod.RegisterHandler(message.MsgForward2, tbbMod.handleForward2Msg)
+		tbbMod.p2pMod.RegisterHandler(message.MsgVote, tbbMod.handleVoteMsg)
+		tbbMod.p2pMod.RegisterHandler(message.MsgQC, tbbMod.handleQCMsg)
+		tbbMod.p2pMod.RegisterHandler(message.MsgQuery, tbbMod.handleQueryMsg)
+	}
 }
 
 func (tbbMod *TBBCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {
@@ -180,13 +201,23 @@ func (tbbMod *TBBCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 // When r = (t1 + 1) and (t2 + 1), check set C in DS, if |C| = 1, use the value i from C as areference for the next step.
-func (tbbMod *TBBCosensusMod) referencePointHandler(refPoint1 time.Timer) {
+func (tbbMod *TBBCosensusMod) referencePoint1Handler(refPoint1 time.Timer) {
 	<-refPoint1.C
-	if tbbMod.localSetC.Size() == 1 {
-		tbbMod.referenceValue = tbbMod.localSetC.GetItems()[0]
-		utils.LoggerInstance.Info("The reference value is %v", tbbMod.referenceValue)
+	if tbbMod.localSetC.Size() == 1 && tbbMod.DSMod.CommitValue == tbbMod.localSetC.GetItems()[0] {
+		tbbMod.referenceValue1 = tbbMod.localSetC.GetItems()[0]
+		utils.LoggerInstance.Info("The reference value is %v", tbbMod.referenceValue1)
 	} else {
-		utils.LoggerInstance.Info("The reference value is empty")
+		utils.LoggerInstance.Info("The size of localSetC at %p is %d, the reference value is empty", tbbMod.localSetC, tbbMod.localSetC.Size())
+	}
+}
+
+func (tbbMod *TBBCosensusMod) referencePoint2Handler(refPoint1 time.Timer) {
+	<-refPoint1.C
+	if tbbMod.localSetC.Size() == 1 && tbbMod.DSMod.CommitValue == tbbMod.localSetC.GetItems()[0] {
+		tbbMod.referenceValue2 = tbbMod.localSetC.GetItems()[0]
+		utils.LoggerInstance.Info("The reference value is %v", tbbMod.referenceValue2)
+	} else {
+		utils.LoggerInstance.Info("The size of localSetC at %p is %d, the reference value is empty", tbbMod.localSetC, tbbMod.localSetC.Size())
 	}
 }
 
@@ -207,9 +238,9 @@ func (tbbMod *TBBCosensusMod) commitPoint2Handler(commitPoint2 time.Timer) {
 
 	if tbbMod.localSetA.Size() == 1 {
 		tbbMod.localSetD[1] = tbbMod.localSetA.GetItems()[0]
-		utils.LoggerInstance.Info("The value commited at  commit point 2 is %v, based on 1Δ-BB* protocol", tbbMod.localSetD[1])
-	} else if tbbMod.referenceValue != "" {
-		tbbMod.localSetD[1] = tbbMod.referenceValue
+		utils.LoggerInstance.Info("The value commited at  commit point 2 is %v, based on BADS* protocol", tbbMod.localSetD[1])
+	} else if tbbMod.referenceValue1 != "" {
+		tbbMod.localSetD[1] = tbbMod.referenceValue1
 		utils.LoggerInstance.Info("The value commited at  commit point 2 is %v, based on the reference value", tbbMod.localSetD[1])
 	} else {
 		utils.LoggerInstance.Info("The value commited at  commit point 2 is empty")
@@ -219,11 +250,11 @@ func (tbbMod *TBBCosensusMod) commitPoint2Handler(commitPoint2 time.Timer) {
 func (tbbMod *TBBCosensusMod) commitPoint3Handler(commitPoint3 time.Timer) {
 	<-commitPoint3.C
 
-	if tbbMod.localSetC.Size() == 1 {
-		tbbMod.localSetD[2] = tbbMod.localSetC.GetItems()[0]
-		utils.LoggerInstance.Info("The value commited at  commit point 3 is %v, based on DS protocol", tbbMod.localSetD[2])
-	} else if tbbMod.referenceValue != "" {
-		tbbMod.localSetD[2] = tbbMod.referenceValue
+	if tbbMod.localSetA.Size() == 1 {
+		tbbMod.localSetD[2] = tbbMod.localSetA.GetItems()[0]
+		utils.LoggerInstance.Info("The value commited at  commit point 3 is %v, based on BADS* protocol", tbbMod.localSetD[2])
+	} else if tbbMod.referenceValue2 != "" {
+		tbbMod.localSetD[2] = tbbMod.referenceValue2
 		utils.LoggerInstance.Info("The value commited at  commit point 3 is %v, based on the reference value", tbbMod.localSetD[2])
 	} else {
 		utils.LoggerInstance.Info("The value commited at  commit point 3 is empty")

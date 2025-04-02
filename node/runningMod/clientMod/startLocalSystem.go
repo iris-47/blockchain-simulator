@@ -47,10 +47,13 @@ func (sam *StartLocalSystemAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitG
 				" -S " + strconv.Itoa(config.ShardNum) + " -N " + strconv.Itoa(config.NodeNum) +
 				" -s " + strconv.Itoa(i) + " -n " + strconv.Itoa(j) +
 				" -m " + config.ConsensusMethod +
-				" -l " + config.LogLevel + " -t " + config.TxType
+				" -l " + config.LogLevel + " -t " + config.TxType +
+				" -r " + strconv.FormatFloat(config.MaliciousRatio, 'f', -3, 64) +
+				" -R " + strconv.FormatFloat(config.ResilientRatio, 'f', -3, 64)
 
-			if config.IsDistributed {
-				cmdstr += " -d "
+			// malicious node
+			if float64(i*config.NodeNum+j) > (1-config.MaliciousRatio)*float64(config.ShardNum*config.NodeNum) {
+				cmdstr += " -M "
 			}
 
 			utils.LoggerInstance.Debug("run cmd: %s", cmdstr)

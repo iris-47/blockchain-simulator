@@ -69,6 +69,7 @@ func (dsMod *DSCosensusMod) HandleInitMsg(msg *message.Message) {
 
 	// wait until f + 1 round to commit
 	maliciousNodes := int64(config.MaliciousRatio * float64(config.NodeNum))
+	utils.LoggerInstance.Debug("The number of malicious nodes is %d(%.2f)", maliciousNodes, config.MaliciousRatio)
 	delayDuration := (maliciousNodes + 1) * config.TickInterval * int64(time.Millisecond)
 	commitTime := dsMod.startTime.Get().Add(time.Duration(delayDuration))
 	commitTimer := time.NewTimer(time.Until(commitTime))
@@ -80,7 +81,7 @@ func (dsMod *DSCosensusMod) HandleInitMsg(msg *message.Message) {
 		// other commit operations
 
 		for _, item := range dsMod.ExtrSet.GetItems() {
-			utils.LoggerInstance.Info("The value in ExtrSet are: %v", item)
+			utils.LoggerInstance.Info("The value in ExtrSet at %p are: %v", dsMod.ExtrSet, item)
 		}
 
 		if dsMod.ExtrSet.Size() == 1 {
@@ -170,7 +171,7 @@ func (dsMod *DSCosensusMod) HandleForwardMsg(msg *message.Message) {
 
 		if sigLen != round && sigLen != round+1 {
 			utils.LoggerInstance.Warn("The length of the signature list %d is not equal to the round number %d", sigLen, round)
-			return
+			// return
 		}
 
 		// add the request to the local set C
@@ -216,10 +217,17 @@ func (dsMod *DSCosensusMod) handleQueryMsg(msg *message.Message) {
 }
 
 func (dsMod *DSCosensusMod) RegisterHandlers() {
-	dsMod.p2pMod.RegisterHandler(message.MsgInit, dsMod.HandleInitMsg)
-	dsMod.p2pMod.RegisterHandler(message.MsgPropose, dsMod.HandleProposeMsg)
-	dsMod.p2pMod.RegisterHandler(message.MsgForward, dsMod.HandleForwardMsg)
-	dsMod.p2pMod.RegisterHandler(message.MsgQuery, dsMod.handleQueryMsg)
+	if config.IsMalicious && dsMod.nodeAttr.Nid != config.ViewNodeId { // malicious view node still needs to register the handlers, but sends wrong propose
+		dsMod.p2pMod.RegisterHandler(message.MsgInit, dsMod.HandleInitMsg_m)
+		dsMod.p2pMod.RegisterHandler(message.MsgPropose, dsMod.HandleProposeMsg_m)
+		dsMod.p2pMod.RegisterHandler(message.MsgForward, dsMod.HandleForwardMsg_m)
+		dsMod.p2pMod.RegisterHandler(message.MsgQuery, dsMod.handleQueryMsg_m)
+	} else {
+		dsMod.p2pMod.RegisterHandler(message.MsgInit, dsMod.HandleInitMsg)
+		dsMod.p2pMod.RegisterHandler(message.MsgPropose, dsMod.HandleProposeMsg)
+		dsMod.p2pMod.RegisterHandler(message.MsgForward, dsMod.HandleForwardMsg)
+		dsMod.p2pMod.RegisterHandler(message.MsgQuery, dsMod.handleQueryMsg)
+	}
 }
 
 func (dsMod *DSCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {

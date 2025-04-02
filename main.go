@@ -22,6 +22,10 @@ func main() {
 	runningFlags := pflag.NewFlagSet("Running Config Related", pflag.ExitOnError)
 	runningFlags.BoolVarP(&args.IsClient, "isClient", "c", false, "whether this node is a client")
 	runningFlags.BoolVarP(&args.IsDistribute, "isDistribute", "d", false, "whether the environment is distribute or local")
+
+	runningFlags.Float64VarP(&args.MaliciousRatio, "maliciousRatio", "r", 0, "the ratio of malicious nodes in the network")
+	runningFlags.Float64VarP(&args.ResilientRatio, "resilientRatio", "R", 0.5, "the ratio of resilient nodes in the network")
+	runningFlags.BoolVarP(&args.IsMalicious, "isMalicious", "M", false, "whether this node is malicious")
 	runningFlags.StringVarP(&args.ConsensusMethod, "consensusMethod", "m", "Monoxide", "choice fo consensus Method, for example, Monoxide")
 	runningFlags.StringVarP(&args.TxType, "txType", "t", "UTXO", "choice of TxType, for example, UTXO")
 	runningFlags.StringVarP(&args.LogLevel, "logLevel", "l", "INFO", "Set the log level of [DEBUG, INFO, WARN, ERROR]")
@@ -48,7 +52,7 @@ func main() {
 	pflag.Parse()
 
 	config.InitConfig(&args)
-	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, true)
+	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, false)
 
 	pcc := config.ChainConfig{
 		NodeID:    args.NodeID,

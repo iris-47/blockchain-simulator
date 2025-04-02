@@ -16,6 +16,7 @@ const (
 	INFO
 	WARN
 	ERROR
+	NONE
 )
 
 // Logger is a simple logger that supports different log levels
@@ -101,6 +102,8 @@ func str2Level(level string) int {
 		return WARN
 	case "ERROR":
 		return ERROR
+	case "NONE":
+		return NONE
 	default:
 		return INFO
 	}

@@ -130,6 +130,10 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleInitMsg(msg *message.Message) {
 			MsgType: message.MsgForward2,
 			Content: utils.Encode(sigListContent),
 		}
+		if _1dbbMod.BAproposeMap[string(sigListContent.Input)] == nil {
+			_1dbbMod.BAproposeMap[string(sigListContent.Input)] = utils.NewSet[signature.Signature]()
+		}
+		_1dbbMod.BAproposeMap[string(sigListContent.Input)].Add(*sigListContent.SigList[0])
 		utils.LoggerInstance.Info("Broadcast the start forward message of BADS*")
 		_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
 	}()
@@ -150,14 +154,14 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleInitMsg(msg *message.Message) {
 			// other commit operations
 
 			for _, item := range _1dbbMod.BABlckSet.GetItems() {
-				utils.LoggerInstance.Info("The value in ExtrSet are: %v", item)
+				utils.LoggerInstance.Info("The value in BABlckSet are: %v", item)
 			}
 
 			if _1dbbMod.BABlckSet.Size() == 1 {
 				utils.LoggerInstance.Info("The value to commit is: %v", _1dbbMod.BABlckSet.GetItems()[0])
 				_1dbbMod.CommitValue = _1dbbMod.BABlckSet.GetItems()[0]
 			} else {
-				utils.LoggerInstance.Warn("The ExtrSet size is %d, The value to commit is 0", _1dbbMod.BABlckSet.Size())
+				utils.LoggerInstance.Warn("The BABlckSet size is %d, The value to commit is 0", _1dbbMod.BABlckSet.Size())
 				_1dbbMod.CommitValue = "0"
 			}
 		}
@@ -203,16 +207,21 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleProposeMsg(msg *message.Message) {
 			<-voteTimer.C
 			utils.LoggerInstance.Info("The vote time is up, try to vote")
 			if _1dbbMod.proposeSet.Size() == 1 {
+				sig := signature.Sign(_1dbbMod.nodeAttr.SecKey, []byte(_1dbbMod.proposeSet.GetItems()[0]))
 				voteContent := VoteContent{
 					NodeId:  _1dbbMod.nodeAttr.Nid,
 					Content: []byte(_1dbbMod.proposeSet.GetItems()[0]),
-					Sig:     signature.Sign(_1dbbMod.nodeAttr.SecKey, []byte(_1dbbMod.proposeSet.GetItems()[0])),
+					Sig:     sig,
 				}
 				voteMsg := message.Message{
 					MsgType: message.MsgVote,
 					Content: utils.Encode(voteContent),
 				}
 
+				if _1dbbMod.voteMap[string(voteContent.Content)] == nil {
+					_1dbbMod.voteMap[string(voteContent.Content)] = utils.NewSet[signature.Signature]()
+				}
+				_1dbbMod.voteMap[string(voteContent.Content)].Add(*sig)
 				utils.LoggerInstance.Info("Broadcast the vote message")
 				_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), voteMsg.JsonEncode())
 			}
@@ -372,7 +381,7 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleForward2Msg(msg *message.Message) 
 				// check if the length of the signature list is equal to the round number
 				if sigLen != round && sigLen != round+1 {
 					utils.LoggerInstance.Warn("The length of the signature list %d is not equal to the round number %d", sigLen, round)
-					return
+					// return
 				}
 
 				_1dbbMod.BABlckSet.Add(string(sigListContent.Input))
