@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"time"
 )
 
 const (
@@ -65,7 +66,9 @@ func NewLogger(args *config.Args, level string, toStdout bool, toFile bool) (*Lo
 		}
 	}
 
-	logger := log.New(file, "", log.Ltime)
+	logger := log.New(file, "", 0)
+	logger.SetFlags(0)
+
 	return &Logger{logger: logger, level: str2Level(level), prefix: prefix}, nil
 }
 
@@ -114,7 +117,8 @@ func (l *Logger) log(level int, levelStr string, format string, v ...interface{}
 	defer l.lock.Unlock()
 	if l.level <= level {
 		callerInfo := l.getCallerInfo()
-		l.logger.SetPrefix(fmt.Sprintf("%s:[%s] %s ", l.prefix, levelStr, callerInfo))
+		timestamp := time.Now().Format("15:04:05.000") // 精确到毫秒
+		l.logger.SetPrefix(fmt.Sprintf("%s: [%s] %s %s ", l.prefix, levelStr, callerInfo, timestamp))
 		l.logger.Printf(format, v...)
 	}
 }
