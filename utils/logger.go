@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -27,6 +29,10 @@ type Logger struct {
 	level  int
 
 	lock sync.Mutex
+
+	shardID int
+	nodeID  int
+	wsConn  *websocket.Conn
 }
 
 // consider using init() to create the default logger instance to avoid faulty usage
@@ -69,7 +75,18 @@ func NewLogger(args *config.Args, level string, toStdout bool, toFile bool) (*Lo
 	logger := log.New(file, "", 0)
 	logger.SetFlags(0)
 
-	return &Logger{logger: logger, level: str2Level(level), prefix: prefix}, nil
+	newLogger := &Logger{
+		logger: logger,
+		prefix: prefix,
+		level:  str2Level(level),
+		lock:   sync.Mutex{},
+
+		shardID: args.ShardID,
+		nodeID:  args.NodeID,
+	}
+	newLogger.initWebSocket()
+
+	return newLogger, nil
 }
 
 func (l *Logger) SetPrefix(prefix string) {
@@ -87,7 +104,11 @@ func (l *Logger) SetLevel(level int) {
 // 获取调用者信息
 func (l *Logger) getCallerInfo() string {
 	// skip=3 是为了跳过 getCallerInfo 和当前的日志函数本身
-	_, file, line, ok := runtime.Caller(3)
+	skip := 3
+	if config.DemoServerURL != "" {
+		skip = 4
+	}
+	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
 		return ""
 	}
@@ -116,10 +137,15 @@ func (l *Logger) log(level int, levelStr string, format string, v ...interface{}
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	if l.level <= level {
-		callerInfo := l.getCallerInfo()
-		timestamp := time.Now().Format("15:04:05.000") // 精确到毫秒
-		l.logger.SetPrefix(fmt.Sprintf("%s: [%s] %s %s ", l.prefix, levelStr, callerInfo, timestamp))
-		l.logger.Printf(format, v...)
+		// either local or remote
+		if config.DemoServerURL != "" {
+			l.sendLogToUI(levelStr, format, v...)
+		} else {
+			callerInfo := l.getCallerInfo()
+			timestamp := time.Now().Format("15:04:05.000")
+			l.logger.SetPrefix(fmt.Sprintf("%s: [%s] %s %s ", l.prefix, levelStr, callerInfo, timestamp))
+			l.logger.Printf(format, v...)
+		}
 	}
 }
 

@@ -12,6 +12,16 @@ type ProtocolMods struct {
 var (
 	// PredefinedProtocolMods is a map that contains the predefined protocol mods
 	PredefinedProtocolMods = map[string]ProtocolMods{
+		"Test": {
+			clientMods:   []string{runningMod.TestAuxiliaryMod},
+			nodeMods:     []string{runningMod.TestAuxiliaryMod},
+			viewNodeMods: []string{runningMod.TestAuxiliaryMod},
+		},
+		"Simple": {
+			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.SendMimicAccountTxsMod},
+			nodeMods:     []string{runningMod.PBFTMod},
+			viewNodeMods: []string{runningMod.PBFTMod, runningMod.ProposeBlockMod},
+		},
 		"ClassicPBFT": {
 			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.MeasureMod, runningMod.TestMod},
 			nodeMods:     []string{runningMod.PBFTMod},

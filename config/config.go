@@ -13,7 +13,7 @@ var (
 // config of the client
 var (
 	TxInjectCount = 80000 // How much Txs to inject?
-	TxInjectSpeed = 10    // How many Txs to inject per second?
+	TxInjectSpeed = 4000  // How many Txs to inject per second?
 	BatchSize     = 4000  // client read a batch of txs and then send them once
 	WaitTime      = 10    // Client wait the Txs to be processed by the blockchain system(seconds)
 )
@@ -52,6 +52,8 @@ var (
 	StartPort   = 28800                                                           // the start port of the IPnodeTable, in local environment
 	ClientAddr  = "192.168.0.1:23333"                                             // client ip address
 	FileInput   = `/home/pjj/Desktop/BlockChain/dataset/0to99999_Transaction.csv` // the BlockTransaction data path
+
+	DemoServerURL = "192.168.80.1:23333" // to send the log to the demo server, empty means not to send
 )
 
 // config of the distributed environment
@@ -153,4 +155,8 @@ func InitConfig(args *Args) {
 	}
 	IPMap[ClientShard] = make(map[int]string)
 	IPMap[ClientShard][0] = ClientAddr
+}
+
+func SetDemoServerURL(url string) {
+	DemoServerURL = url
 }

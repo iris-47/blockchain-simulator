@@ -4,6 +4,7 @@ package runningMod
 import (
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
+	"BlockChainSimulator/node/runningMod/auxiliaryMod"
 	"BlockChainSimulator/node/runningMod/clientMod"
 	"BlockChainSimulator/node/runningMod/consensusMod"
 	"BlockChainSimulator/node/runningMod/consensusMod/ds"
@@ -24,6 +25,8 @@ const (
 
 // Running mod does not relate to consensus
 const (
+	TestAuxiliaryMod string = "testAuxiliary"
+
 	ProposeTxsMod    string = "ProposeTxs"
 	ProposeBlockMod  string = "ProposeBlock"
 	ProposeStringMod string = "ProposeString"
@@ -42,6 +45,7 @@ const (
 
 	// add more send type here
 	SendMimicContractTxsMod string = "sendMimicContractTxs" // used by the client to send mimic contract txs
+	SendMimicAccountTxsMod  string = "sendMimicAccountTxs"  // used by the client to send mimic account txs
 	SendStringManualMod     string = "sendStringManual"     // used by the client to send a string manually
 )
 
@@ -60,6 +64,7 @@ func init() {
 	runningModRegistry[ProposeStringMod] = consensusMod.NewProposeStringAuxiliaryMod
 
 	// Auxiliary Running Mod
+	runningModRegistry[TestAuxiliaryMod] = auxiliaryMod.NewTestAuxiliaryMod
 
 	// Client Running Mod
 	runningModRegistry[TestMod] = clientMod.NewTestAuxiliaryMod
@@ -69,6 +74,7 @@ func init() {
 	runningModRegistry[StartLocalSystemMod] = clientMod.NewStartLocalSystemAuxiliaryMod
 	runningModRegistry[StopSystemMod] = clientMod.NewStopSystemAuxiliaryMod
 	runningModRegistry[SendMimicContractTxsMod] = clientMod.NewSendMimicContractTxsMod
+	runningModRegistry[SendMimicAccountTxsMod] = clientMod.NewsendMimicAccountTxsMod
 	runningModRegistry[SendStringManualMod] = clientMod.NewSendStringManualMod
 }
 
