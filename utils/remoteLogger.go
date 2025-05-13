@@ -22,7 +22,7 @@ type LogMessage struct {
 }
 
 func (l *Logger) initWebSocket() {
-	if config.DemoServerURL == "" {
+	if !config.ConnectRemoteDemo {
 		fmt.Printf("No WebSocket\n")
 		return
 	}
@@ -49,12 +49,12 @@ func (l *Logger) initWebSocket() {
 
 // 发送日志到UI服务器
 func (l *Logger) sendLogToUI(level string, format string, v ...interface{}) {
-	if config.DemoServerURL == "" {
+	if !config.ConnectRemoteDemo {
 		return
 	}
 
 	message := fmt.Sprintf(format, v...)
-	source := l.getCallerInfo()
+	source := l.getCallerInfo(4)
 	timestamp := time.Now().Format("15:04:05.000")
 
 	logMessage := LogMessage{

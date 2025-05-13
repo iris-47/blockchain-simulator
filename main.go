@@ -29,6 +29,7 @@ func main() {
 	runningFlags.StringVarP(&args.ConsensusMethod, "consensusMethod", "m", "Monoxide", "choice fo consensus Method, for example, Monoxide")
 	runningFlags.StringVarP(&args.TxType, "txType", "t", "UTXO", "choice of TxType, for example, UTXO")
 	runningFlags.StringVarP(&args.LogLevel, "logLevel", "l", "INFO", "Set the log level of [DEBUG, INFO, WARN, ERROR]")
+	runningFlags.BoolVarP(&args.ConnetRemoteDemo, "connetRemoteDemo", "C", false, "whether the node is connected to the remote demo")
 	// <-- Client Config Related -->
 	clientFlags := pflag.NewFlagSet("Client Config Related", pflag.ExitOnError)
 	clientFlags.IntVarP(&args.TxInjectCount, "txInjectCount", "i", 80000, "how many txs to inject")
@@ -52,7 +53,7 @@ func main() {
 	pflag.Parse()
 
 	config.InitConfig(&args)
-	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, false)
+	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, true)
 
 	pcc := config.ChainConfig{
 		NodeID:    args.NodeID,

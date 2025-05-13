@@ -9,10 +9,14 @@
 BlockChainSimulator
 
 /vendor/
-/*.mod
+
 /*.sum
 /log
 /blockchain_data
 /result
+
+*.py
+*.xlsx
+*.pem
 
 draft*

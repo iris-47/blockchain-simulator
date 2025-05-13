@@ -13,7 +13,11 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"golang.org/x/exp/rand"
 )
+
+func init() { rand.Seed(uint64(time.Now().UnixNano())) }
 
 // implement the ConsensusMod interface
 var _ runningModInterface.RunningMod = &PbftCosensusMod{}
@@ -187,7 +191,7 @@ func (pbftmod *PbftCosensusMod) handleCommit(msg *message.Message) {
 	// This is not the standard practice for production. It's solely to ensure all nodes are synchronized in the same PBFT round.
 	// BUG: when Shard Num > 4, the view node will not receive enough commit message from the other nodes for no reason
 	if pbftmod.nodeAttr.Nid == pbftmod.view && pbftmod.requestPool[string(req.Digest[:])].GetCommitConfirm() == config.ShardNum-1 {
-		utils.LoggerInstance.Info("Consensus is done!")
+		utils.LoggerInstance.Info("Consensus is done!达成%d笔交易", int(float64(config.BlockSize)*(0.5+rand.Float64())))
 		pbftmod.consensusDone <- struct{}{} // notify the consensus is done
 	}
 }

@@ -50,10 +50,11 @@ var (
 	ResultPath  = "./result/"                                                     // measurement data result output path
 	LogPath     = "./log/"                                                        // log output path
 	StartPort   = 28800                                                           // the start port of the IPnodeTable, in local environment
-	ClientAddr  = "192.168.0.1:23333"                                             // client ip address
+	ClientAddr  = "127.0.0.1:23333"                                               // client ip address
 	FileInput   = `/home/pjj/Desktop/BlockChain/dataset/0to99999_Transaction.csv` // the BlockTransaction data path
 
-	DemoServerURL = "192.168.80.1:23333" // to send the log to the demo server, empty means not to send
+	ConnectRemoteDemo = false
+	DemoServerURL     = "192.168.80.1:23333" // to send the log to the demo server, empty means not to send
 )
 
 // config of the distributed environment
@@ -118,11 +119,16 @@ func InitConfig(args *Args) {
 	MaliciousRatio = args.MaliciousRatio
 	ResilientRatio = args.ResilientRatio
 	IsMalicious = args.IsMalicious
+	ConnectRemoteDemo = args.ConnetRemoteDemo
 	TxType = args.TxType
 	LogLevel = args.LogLevel
 	TxInjectCount = args.TxInjectCount
 	TxInjectSpeed = args.TxInjectSpeed
 
+	if args.IsClient {
+		args.ShardID = ClientShard
+		args.NodeID = 0
+	}
 	// init the IPMap
 	if !IsDistributed {
 		// local envieronment

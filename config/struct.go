@@ -23,6 +23,8 @@ type Args struct {
 	TxType          string // choice of TxType, for example, UTXO
 	LogLevel        string // Set the log level of [DEBUG, INFO, WARN, ERROR]
 
+	ConnetRemoteDemo bool // whether the node is connected to the remote demo
+
 	// <-- Client Config Related -->
 	TxInjectCount int // how many txs to inject
 	TxInjectSpeed int // how many txs to inject per second

@@ -56,6 +56,10 @@ func (sam *StartLocalSystemAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitG
 				cmdstr += " -M "
 			}
 
+			if config.ConnectRemoteDemo {
+				cmdstr += " -C "
+			}
+
 			utils.LoggerInstance.Debug("run cmd: %s", cmdstr)
 
 			cmd := exec.Command("bash", "-c", cmdstr)

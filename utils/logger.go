@@ -102,12 +102,7 @@ func (l *Logger) SetLevel(level int) {
 }
 
 // 获取调用者信息
-func (l *Logger) getCallerInfo() string {
-	// skip=3 是为了跳过 getCallerInfo 和当前的日志函数本身
-	skip := 3
-	if config.DemoServerURL != "" {
-		skip = 4
-	}
+func (l *Logger) getCallerInfo(skip int) string {
 	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
 		return ""
@@ -138,10 +133,10 @@ func (l *Logger) log(level int, levelStr string, format string, v ...interface{}
 	defer l.lock.Unlock()
 	if l.level <= level {
 		// either local or remote
-		if config.DemoServerURL != "" {
+		if config.ConnectRemoteDemo && l.shardID != config.ClientShard {
 			l.sendLogToUI(levelStr, format, v...)
 		} else {
-			callerInfo := l.getCallerInfo()
+			callerInfo := l.getCallerInfo(3)
 			timestamp := time.Now().Format("15:04:05.000")
 			l.logger.SetPrefix(fmt.Sprintf("%s: [%s] %s %s ", l.prefix, levelStr, callerInfo, timestamp))
 			l.logger.Printf(format, v...)
