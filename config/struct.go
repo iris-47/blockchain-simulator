@@ -30,6 +30,22 @@ type Args struct {
 	TxInjectSpeed int // how many txs to inject per second
 }
 
+type ExtConfig struct {
+	ViewNodeId    *int      `json:"viewNodeId"`
+	ClientShard   *int      `json:"clientShard"`
+	StoragePath   *string   `json:"storagePath"`
+	ResultPath    *string   `json:"resultPath"`
+	LogPath       *string   `json:"logPath"`
+	StartPort     *int      `json:"startPort"`
+	ClientAddr    *string   `json:"clientAddr"`
+	FileInput     *string   `json:"fileInput"`
+	DemoServerURL *string   `json:"demoServerURL"`
+	NodePerServer *int      `json:"nodePerServer"`
+	ServerAddrs   *[]string `json:"serverAddrs"`
+	StartTimeWait *int64    `json:"startTimeWait"`
+	TickInterval  *int64    `json:"tickInterval"`
+}
+
 // Configuration for a Blockchain
 type ChainConfig struct {
 	NodeID   int // id of this node, for example, 0
