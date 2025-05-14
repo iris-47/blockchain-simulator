@@ -18,17 +18,17 @@ var (
 			viewNodeMods: []string{runningMod.TestAuxiliaryMod},
 		},
 		"Simple": {
-			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.SendMimicAccountTxsMod},
+			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.StopSystemMod, runningMod.SendMimicAccountTxsMod},
 			nodeMods:     []string{runningMod.PBFTMod},
 			viewNodeMods: []string{runningMod.PBFTMod, runningMod.ProposeBlockMod},
 		},
 		"ClassicPBFT": {
-			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.MeasureMod, runningMod.TestMod},
+			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.StopSystemMod, runningMod.MeasureMod, runningMod.TestMod},
 			nodeMods:     []string{runningMod.PBFTMod},
 			viewNodeMods: []string{runningMod.PBFTMod, runningMod.ProposeBlockMod},
 		},
 		"TBD": {
-			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.MeasureMod, runningMod.SendMimicContractTxsMod},
+			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.StopSystemMod, runningMod.MeasureMod, runningMod.SendMimicContractTxsMod},
 			nodeMods:     []string{runningMod.PBFTMod},
 			viewNodeMods: []string{runningMod.PBFTMod, runningMod.ProposeBlockMod},
 		},

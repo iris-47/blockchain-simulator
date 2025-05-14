@@ -33,7 +33,7 @@ func main() {
 	// <-- Client Config Related -->
 	clientFlags := pflag.NewFlagSet("Client Config Related", pflag.ExitOnError)
 	clientFlags.IntVarP(&args.TxInjectCount, "txInjectCount", "i", 80000, "how many txs to inject")
-	clientFlags.IntVarP(&args.TxInjectSpeed, "txInjectSpeed", "p", 100, "how many txs to inject per second")
+	clientFlags.IntVarP(&args.TxInjectSpeed, "txInjectSpeed", "p", 4000, "how many txs to inject per second")
 
 	pflag.CommandLine.AddFlagSet(blockchainFlags)
 	pflag.CommandLine.AddFlagSet(runningFlags)

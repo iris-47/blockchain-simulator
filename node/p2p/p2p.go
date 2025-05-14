@@ -76,7 +76,7 @@ func (p2p *P2PMod) handleConnection(conn net.Conn) {
 		// utils.LoggerInstance.Debug("Received msg of type %v len %v", msg.MsgType, len(content))
 
 		if handler, ok := p2p.MsgHandlerMap[msg.MsgType]; ok {
-			handler(msg) // Q: why use/not use go here?
+			go handler(msg) // Q: why use/not use go here?
 		} else {
 			utils.LoggerInstance.Error("No handler for message type %v\n", msg.MsgType)
 		}

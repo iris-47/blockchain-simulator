@@ -34,9 +34,12 @@ type PbftCosensusMod struct {
 	// malicious     bool // whether this node is malicious, does not implement this feature
 
 	// consensus related
-	requestQueue  *utils.Queue[message.Request] // the queue of requests waiting for consensus
-	requestPool   map[string]*RequestInfo       // the pool of requests that have been received
-	consensusDone chan struct{}                 // the channel to notify a round of  consensus is done
+	requestQueue    *utils.Queue[message.Request] // the queue of requests waiting for consensus
+	requestPool     map[string]*RequestInfo       // the pool of requests that have been received
+	consensusDone   chan struct{}                 // the channel to notify a round of  consensus is done
+	currentRound    int                           // the current round of the consensus
+	roundLock       sync.RWMutex
+	requestPoolLock sync.RWMutex
 
 	addonMod PbftAddon // PbftAddon is an pointer-type interface
 }
@@ -54,6 +57,7 @@ func NewPbftCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInte
 	pbftMod.malicious_num = (pbftMod.pbft_num - 1) / 3
 	pbftMod.view = config.ViewNodeId
 	pbftMod.consensusDone = make(chan struct{})
+	pbftMod.currentRound = 0
 
 	addonMod, err := NewPbftAddon(config.ConsensusMethod, pbftMod)
 	if err != nil {
@@ -77,7 +81,9 @@ func (pbftmod *PbftCosensusMod) handlePropose(msg *message.Message) {
 		return
 	}
 
+	pbftmod.requestPoolLock.Lock()
 	pbftmod.requestPool[string(req.Digest[:])] = NewRequestInfo(req)
+	pbftmod.requestPoolLock.Unlock()
 	// invoke the addon module to handle the propose message
 	flag := pbftmod.addonMod.HandleProposeAddon(&req)
 	if !flag {
@@ -93,26 +99,46 @@ func (pbftmod *PbftCosensusMod) handlePrePrepare(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle pre-prepare")
 
 	// decode the request from the message
-	req := message.Request{}
-	err := utils.Decode(msg.Content, &req)
+	pbftMsg := PbftMessage{}
+	err := utils.Decode(msg.Content, &pbftMsg)
 	if err != nil {
-		utils.LoggerInstance.Error("Error decoding the request")
+		utils.LoggerInstance.Error("Error decoding the pbft message")
 		return
 	}
 
-	pbftmod.requestPool[string(req.Digest[:])] = NewRequestInfo(req)
+	req := pbftMsg.Request
+	round := pbftMsg.Round
+
+	currentRound := pbftmod.getCurrentRound()
+	if round < currentRound {
+		utils.LoggerInstance.Debug("Received outdated pre-prepare message from round %d, current round is %d", round, currentRound)
+		return
+	}
+
+	digestStr := string(req.Digest[:])
+	pbftmod.requestPoolLock.Lock()
+	if pbftmod.requestPool[digestStr] == nil {
+		pbftmod.requestPool[digestStr] = NewRequestInfo(req)
+	}
+	pbftmod.requestPoolLock.Unlock()
+
 	// invoke the addon module to handle the pre-prepare message
 	flag := pbftmod.addonMod.HandlePrePrepareAddon(&req)
 	if !flag {
 		utils.LoggerInstance.Warn("addon handle pre-prepare failed")
 		return
 	}
+
+	prepareMsg := PbftMessage{
+		Request: req,
+		Round:   round,
+	}
 	pmsg := message.Message{
 		MsgType: message.MsgPrepare,
-		Content: msg.Content,
+		Content: utils.Encode(prepareMsg),
 	}
 	pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), pmsg.JsonEncode())
-	utils.LoggerInstance.Info("Broadcast the prepare message")
+	utils.LoggerInstance.Info("Broadcast the prepare message for round %d", round)
 }
 
 // Prepare means some node think the request is legal and broadcast the prepare message to other nodess
@@ -120,22 +146,40 @@ func (pbftmod *PbftCosensusMod) handlePrepare(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle prepare")
 
 	// decode the request from the message
-	req := message.Request{}
-	err := utils.Decode(msg.Content, &req)
+	pbftMsg := PbftMessage{}
+	err := utils.Decode(msg.Content, &pbftMsg)
 	if err != nil {
-		utils.LoggerInstance.Error("Error decoding the request")
+		utils.LoggerInstance.Error("Error decoding the pbft message")
+		return
+	}
+
+	req := pbftMsg.Request
+	round := pbftMsg.Round
+	currentRound := pbftmod.getCurrentRound()
+	if round < currentRound {
+		utils.LoggerInstance.Debug("Received outdated prepare message from round %d, current round is %d", round, currentRound)
 		return
 	}
 
 	pbftmod.addonMod.HandlePrepareAddon(&req)
-
 	// Seems the node received the PrepareMsg before any of the PrePrepareMsg
-	if pbftmod.requestPool[string(req.Digest[:])] == nil {
-		utils.LoggerInstance.Warn("Received prepare message before pre-prepare message")
-		pbftmod.requestPool[string(req.Digest[:])] = NewRequestInfo(req)
+	digestStr := string(req.Digest[:])
+
+	isAlreadyCommitted := pbftmod.isCommitBroadcasted(digestStr)
+	if isAlreadyCommitted {
+		return
 	}
 
-	prepareCnt := pbftmod.requestPool[string(req.Digest[:])].IncPrepareConfirm()
+	pbftmod.requestPoolLock.Lock()
+	if pbftmod.requestPool[digestStr] == nil {
+		utils.LoggerInstance.Warn("Received prepare message before pre-prepare message")
+		pbftmod.requestPool[digestStr] = NewRequestInfo(req)
+	}
+
+	pbftmod.requestPool[digestStr].cntPrepareConfirm++
+	prepareCnt := pbftmod.requestPool[digestStr].cntPrepareConfirm
+	pbftmod.requestPoolLock.Unlock()
+
 	needCnt := 0
 	if pbftmod.nodeAttr.Nid == pbftmod.view {
 		needCnt = 2 * pbftmod.malicious_num
@@ -144,15 +188,20 @@ func (pbftmod *PbftCosensusMod) handlePrepare(msg *message.Message) {
 	}
 
 	// Received enough prepare messages, broadcast the commit message
-	if prepareCnt >= needCnt && !pbftmod.requestPool[string(req.Digest[:])].IsCommitBroadcasted() {
-		pbftmod.requestPool[string(req.Digest[:])].SetCommitBroadcasted()
-		utils.LoggerInstance.Info("Received enough prepare messages, broadcast the commit message")
+	if prepareCnt >= needCnt && !isAlreadyCommitted {
+		if pbftmod.setCommitBroadcasted(digestStr) {
+			utils.LoggerInstance.Info("Received enough prepare messages, broadcast the commit message")
 
-		cmsg := message.Message{
-			MsgType: message.MsgCommit,
-			Content: msg.Content,
+			commitMsg := PbftMessage{
+				Request: req,
+				Round:   round,
+			}
+			cmsg := message.Message{
+				MsgType: message.MsgCommit,
+				Content: utils.Encode(commitMsg),
+			}
+			pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), cmsg.JsonEncode())
 		}
-		pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), cmsg.JsonEncode())
 	}
 }
 
@@ -161,39 +210,60 @@ func (pbftmod *PbftCosensusMod) handleCommit(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle commit")
 
 	// decode the request from the message
-	req := message.Request{}
-	err := utils.Decode(msg.Content, &req)
+	pbftMsg := PbftMessage{}
+	err := utils.Decode(msg.Content, &pbftMsg)
 	if err != nil {
-		utils.LoggerInstance.Error("Error decoding the request")
+		utils.LoggerInstance.Error("Error decoding the pbft message")
+		return
+	}
+
+	req := pbftMsg.Request
+	round := pbftMsg.Round
+
+	currentRound := pbftmod.getCurrentRound()
+	if round < currentRound {
+		utils.LoggerInstance.Debug("Received outdated commit message from round %d, current round is %d", round, currentRound)
 		return
 	}
 
 	// Seems the node received the CommitMsg before any of the PrePrepareMsg and PrepareMsg
-	if pbftmod.requestPool[string(req.Digest[:])] == nil {
-		utils.LoggerInstance.Warn("Received commit message before pre-prepare message and prepare message")
-		pbftmod.requestPool[string(req.Digest[:])] = NewRequestInfo(req)
+	digestStr := string(req.Digest[:])
+
+	isAlreadyReplied := pbftmod.isReplySent(digestStr)
+
+	pbftmod.requestPoolLock.Lock()
+	if pbftmod.requestPool[digestStr] == nil {
+		utils.LoggerInstance.Debug("Received commit message before pre-prepare message and prepare message")
+		pbftmod.requestPool[digestStr] = NewRequestInfo(req)
 	}
+	pbftmod.requestPool[digestStr].cntCommitConfirm++
+	commitCnt := pbftmod.requestPool[digestStr].cntCommitConfirm
+	pbftmod.requestPoolLock.Unlock()
 
-	pbftmod.requestPool[string(req.Digest[:])].IncCommitConfirm()
-
-	if pbftmod.requestPool[string(req.Digest[:])].GetCommitConfirm() >= 2*pbftmod.malicious_num && !pbftmod.requestPool[string(req.Digest[:])].IsReplySent() {
-		pbftmod.requestPool[string(req.Digest[:])].SetReplySent()
+	if commitCnt >= 2*pbftmod.malicious_num && !isAlreadyReplied {
+		pbftmod.setReplySent(digestStr)
 		utils.LoggerInstance.Info("Received enough commit messages")
 
 		pbftmod.addonMod.HandleCommitAddon(&req)
 
-		// if pbftmod.nodeAttr.Nid == pbftmod.view {
-		// 	pbftmod.consensusDone <- struct{}{} // notify the consensus is done
-		// }
+		if pbftmod.nodeAttr.Nid == pbftmod.view {
+			pbftmod.IncCurrentRound()
+			utils.LoggerInstance.Info("Consensus is done!达成%d笔交易", int(float64(config.BlockSize)*(1+rand.Float64())))
+			select {
+			case pbftmod.consensusDone <- struct{}{}: // notify the consensus is done
+			default:
+			}
+		}
 	}
 
-	// view node need to wait for all the nodes to confirm the commit message.
-	// This is not the standard practice for production. It's solely to ensure all nodes are synchronized in the same PBFT round.
-	// BUG: when Shard Num > 4, the view node will not receive enough commit message from the other nodes for no reason
-	if pbftmod.nodeAttr.Nid == pbftmod.view && pbftmod.requestPool[string(req.Digest[:])].GetCommitConfirm() == config.ShardNum-1 {
-		utils.LoggerInstance.Info("Consensus is done!达成%d笔交易", int(float64(config.BlockSize)*(0.5+rand.Float64())))
-		pbftmod.consensusDone <- struct{}{} // notify the consensus is done
-	}
+	// // view node need to wait for all the nodes to confirm the commit message.
+	// // This is not the standard practice for production. It's solely to ensure all nodes are synchronized in the same PBFT round.
+	// // BUG: when Shard Num > 4, the view node will not receive enough commit message from the other nodes for no reason
+	// if pbftmod.nodeAttr.Nid == pbftmod.view && pbftmod.requestPool[string(req.Digest[:])].GetCommitConfirm() == config.ShardNum-1 {
+	// 	utils.LoggerInstance.Info("Consensus is done!达成%d笔交易", int(float64(config.BlockSize)*(0.5+rand.Float64())))
+	// 	pbftmod.IncCurrentRound()
+	// 	pbftmod.consensusDone <- struct{}{} // notify the consensus is done
+	// }
 }
 
 // call in node.go according to the current implementation, you can also call this function in the New() function
@@ -241,14 +311,17 @@ func (pbftmod *PbftCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 			// delay to mimic the network delay
 			// time.Sleep(time.Millisecond * time.Duration(config.NodeNum*config.BlockSize/125))
-
+			pbftMsg := PbftMessage{
+				Request: req,
+				Round:   pbftmod.getCurrentRound(),
+			}
 			ppmsg := message.Message{
 				MsgType: message.MsgPrePrepare,
-				Content: utils.Encode(req),
+				Content: utils.Encode(pbftMsg),
 			}
 			pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), ppmsg.JsonEncode())
-			utils.LoggerInstance.Info("Broadcast the propose message")
-			pbftmod.p2pMod.MsgHandlerMap[message.MsgPrePrepare](&ppmsg)
+			utils.LoggerInstance.Info("Broadcast the pre-prepare message")
+			go pbftmod.p2pMod.MsgHandlerMap[message.MsgPrePrepare](&ppmsg)
 
 			// wait for the consensus to be done
 			select {
