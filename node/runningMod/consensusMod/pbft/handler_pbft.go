@@ -248,7 +248,7 @@ func (pbftmod *PbftCosensusMod) handleCommit(msg *message.Message) {
 
 		if pbftmod.nodeAttr.Nid == pbftmod.view {
 			pbftmod.IncCurrentRound()
-			utils.LoggerInstance.Info("Consensus is done!达成%d笔交易", int(float64(config.BlockSize)*(1+rand.Float64())))
+			utils.LoggerInstance.Info("Consensus is done!达成%d笔交易", int(float64(config.BlockSize)*(0.6+rand.Float64())))
 			select {
 			case pbftmod.consensusDone <- struct{}{}: // notify the consensus is done
 			default:
