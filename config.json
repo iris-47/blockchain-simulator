@@ -11,7 +11,7 @@
 
   "fileInput": "/home/pjj/Desktop/BlockChain/dataset/0to99999_Transaction.csv",
 
-  "demoServerURL": "192.168.80.1:23333",
+  "demoServerURL": "47.109.159.229:23333",
 
   "nodePerServer": 40,
   "serverAddrs": [

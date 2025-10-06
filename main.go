@@ -52,7 +52,9 @@ func main() {
 	}
 	pflag.Parse()
 
-	config.InitConfig(&args)
+	config.InitConfig(&args) // init config from the command line arguments
+	config.LoadConfig()      // load config from the config file such as config.json
+
 	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, true)
 
 	pcc := config.ChainConfig{
