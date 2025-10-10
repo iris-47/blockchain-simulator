@@ -9,6 +9,7 @@ import (
 	"BlockChainSimulator/node/runningMod/consensusMod"
 	"BlockChainSimulator/node/runningMod/consensusMod/ds"
 	"BlockChainSimulator/node/runningMod/consensusMod/pbft"
+	"BlockChainSimulator/node/runningMod/consensusMod/rbe"
 	"BlockChainSimulator/node/runningMod/consensusMod/tbb"
 	"BlockChainSimulator/node/runningMod/runningModInterface"
 )
@@ -49,10 +50,17 @@ const (
 	SendStringManualMod     string = "sendStringManual"     // used by the client to send a string manually
 )
 
+const (
+	RBEMod           string = "rbe"         // RBE 共识模块
+	RBEMonitoringMod string = "rbe_monitor" // RBE 监控模块
+)
+
 var runningModRegistry = make(map[string]func(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod)
 
 func init() {
 	// register more msgHandler type here
+	runningModRegistry[RBEMod] = rbe.NewRBEIdentityAuthMod
+	runningModRegistry[RBEMonitoringMod] = rbe.NewRBEMonitorMod
 
 	// Consensus Running Mod
 	runningModRegistry[PBFTMod] = pbft.NewPbftCosensusMod
