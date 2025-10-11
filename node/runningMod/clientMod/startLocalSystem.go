@@ -41,8 +41,9 @@ func (sam *StartLocalSystemAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitG
 	for i := 0; i < config.ShardNum; i++ {
 		// start the shard
 		for j := 0; j < config.NodeNum; j++ {
+			processName := config.ProcessName
 			// start the consensus node, no more need the client-related parameters
-			cmdstr := "./BlockChainSimulator" +
+			cmdstr := "./" + processName +
 				" -b " + strconv.Itoa(config.BlockSize) +
 				" -S " + strconv.Itoa(config.ShardNum) + " -N " + strconv.Itoa(config.NodeNum) +
 				" -s " + strconv.Itoa(i) + " -n " + strconv.Itoa(j) +

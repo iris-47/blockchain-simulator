@@ -52,8 +52,8 @@ func main() {
 	}
 	pflag.Parse()
 
-	config.InitConfig(&args) // init config from the command line arguments
 	config.LoadConfig()      // load config from the config file such as config.json
+	config.InitConfig(&args) // init config from the command line arguments
 
 	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, true)
 

@@ -30,7 +30,12 @@ type Args struct {
 	TxInjectSpeed int // how many txs to inject per second
 }
 
+// 与config.json文件对应的结构体
 type ExtConfig struct {
+	ProcessName   *string   `json:"processName"`
+	SSHUser       *string   `json:"sshUser"`
+	SSHKeyPath    *string   `json:"sshKeyPath"`
+	RemoteWorkDir *string   `json:"remoteWorkDir"`
 	ViewNodeId    *int      `json:"viewNodeId"`
 	ClientShard   *int      `json:"clientShard"`
 	StoragePath   *string   `json:"storagePath"`

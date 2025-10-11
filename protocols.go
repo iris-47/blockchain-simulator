@@ -51,7 +51,7 @@ var (
 			viewNodeMods: []string{runningMod.DSMod, runningMod.ProposeStringMod},
 		},
 		"RBE": {
-			clientMods:   []string{runningMod.StartLocalSystemMod, runningMod.StopSystemMod, runningMod.RBEMonitoringMod},
+			clientMods:   []string{runningMod.StartDistributedSystemMod, runningMod.StopSystemMod, runningMod.RBEMonitoringMod},
 			nodeMods:     []string{runningMod.RBEMod},
 			viewNodeMods: []string{runningMod.RBEMod},
 		},

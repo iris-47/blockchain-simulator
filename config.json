@@ -1,4 +1,9 @@
 {
+  "processName": "DroneSystem",
+  "sshUser": "pjj",
+  "sshKeyPath": "/home/pjj/.ssh/id_ed25519",
+  "remoteWorkDir": "/home/pjj/Desktop/BlockChain/blockchain-simulator",
+
   "viewNodeId": 0,
   "clientShard": 268435455,
   

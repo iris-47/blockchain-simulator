@@ -9,6 +9,14 @@ import (
 	"os"
 )
 
+// distributed environment config struct
+var (
+	ProcessName   = "BlockChainSystem"                    // the name of the executable file
+	SSHUser       = "your_ssh_username"                   // the ssh username for remote login
+	SSHKeyPath    = "/path/to/your/private/key"           // the path to your ssh private key
+	RemoteWorkDir = "/home/your_ssh_username/ProcessName" // the working directory of the remote server
+)
+
 var (
 	ViewNodeId  = 0         // the nodeID of the initial view nodes
 	ClientShard = 0xfffffff // the shardID of the client
@@ -26,7 +34,7 @@ var (
 
 // config of the distributed environment
 var (
-	NodePerServer = 40        // the number of nodes in a server
+	NodePerServer = 40        // the number of nodes in a server, notice!! 1 server is a shard!!
 	ServerAddrs   = []string{ // for distribute experiment
 		"192.168.0.1", "192.168.0.245", "192.168.0.251", "192.168.0.243",
 		"192.168.0.246", "192.168.0.8", "192.168.0.250", "192.168.0.252",
@@ -104,6 +112,18 @@ func LoadConfig() {
 	fmt.Printf("Using configuration file: %s\n", configFile)
 
 	// Apply the configuration, only for values that are set
+	if config.ProcessName != nil {
+		ProcessName = *config.ProcessName
+	}
+	if config.SSHUser != nil {
+		SSHUser = *config.SSHUser
+	}
+	if config.SSHKeyPath != nil {
+		SSHKeyPath = *config.SSHKeyPath
+	}
+	if config.RemoteWorkDir != nil {
+		RemoteWorkDir = *config.RemoteWorkDir
+	}
 	if config.ViewNodeId != nil {
 		ViewNodeId = *config.ViewNodeId
 	}
