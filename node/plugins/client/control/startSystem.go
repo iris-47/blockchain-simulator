@@ -1,10 +1,10 @@
-package clientMod
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/utils"
 	"context"
 	"os/exec"
@@ -14,25 +14,30 @@ import (
 	"time"
 )
 
+var _ plugininterface.Plugin = &StartSystemPlugin{}
+
 // used by client node to run the whole blockchain system
-type StartDistributedSystemAuxiliaryMod struct {
+type StartSystemPlugin struct {
 	nodeAttr *nodeattr.NodeAttr // the attribute of the belonging node
 	p2pMod   *p2p.P2PMod        // the p2p network module of the belonging node
 }
 
-func NewStartDistributedSystemAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	sdm := new(StartDistributedSystemAuxiliaryMod)
+func NewStartSystemPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	sdm := new(StartSystemPlugin)
 	sdm.nodeAttr = attr
 	sdm.p2pMod = p2p
 
 	return sdm
 }
 
-func (sdm *StartDistributedSystemAuxiliaryMod) RegisterHandlers() {
-
+func (sdm *StartSystemPlugin) Initialize() {
 }
 
-func (sdm *StartDistributedSystemAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (sdm *StartSystemPlugin) Cleanup() {
+}
+
+// Run 通过ssh启动整个系统，无论是本地系统还是分布式系统
+func (sdm *StartSystemPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	// always start the main node of each shard
@@ -52,7 +57,7 @@ func (sdm *StartDistributedSystemAuxiliaryMod) Run(ctx context.Context, wg *sync
 	}
 }
 
-func (sdm *StartDistributedSystemAuxiliaryMod) startNode(ShardID int, NodeID int) {
+func (sdm *StartSystemPlugin) startNode(ShardID int, NodeID int) {
 	// get IP address from IPMap
 	ipPort, ok := config.IPMap[ShardID][NodeID]
 	if !ok {

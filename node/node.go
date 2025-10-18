@@ -5,8 +5,8 @@ import (
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/pluginloader"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/utils"
 	"context"
 	"os"
@@ -16,32 +16,44 @@ import (
 )
 
 type Node struct {
-	Attr   *nodeattr.NodeAttr // the base attribute of the node
-	P2PMod *p2p.P2PMod        // the p2p network module
-
-	// running modules
-	RunningMods []runningModInterface.RunningMod
+	Attr    *nodeattr.NodeAttr       // the base attribute of the node
+	P2PMod  *p2p.P2PMod              // the p2p network module
+	Plugins []plugininterface.Plugin // 加载的插件列表
 }
 
-func NewNode(sid int, nid int, pcc *config.ChainConfig, runningModTypes []string) (*Node, error) {
-	var err error
+func NewNode(sid int, nid int, pcc *config.ChainConfig, pluginConfigs []pluginloader.PluginConfig) (*Node, error) {
 	node := new(Node)
 	node.Attr = nodeattr.NewNodeAttr(sid, nid, pcc)
 	node.P2PMod = p2p.NewP2PMod(node.Attr.Ipaddr)
 
-	for _, runningModType := range runningModTypes {
-		runningMod := runningMod.NewRunningMod(runningModType, node.Attr, node.P2PMod)
-		if runningMod == nil {
-			utils.LoggerInstance.Error("Error creating running module: %v", runningModType)
+	loader := pluginloader.GetLoader()
+
+	// 加载并创建插件实例
+	for _, pluginCfg := range pluginConfigs {
+		// 确保包已加载
+		if err := loader.LoadPackage(pluginCfg.Package, config.PluginPath); err != nil {
+			utils.LoggerInstance.Error("Failed to load package %s: %v", pluginCfg.Package, err)
 			return nil, err
 		}
-		utils.LoggerInstance.Info("Created running module: %v", runningModType)
-		node.RunningMods = append(node.RunningMods, runningMod)
+
+		// 获取插件构造函数
+		constructor, err := loader.GetPlugin(pluginCfg.Plugin)
+		if err != nil {
+			utils.LoggerInstance.Error("Failed to get plugin %s: %v", pluginCfg.Plugin, err)
+			return nil, err
+		}
+
+		// 创建插件实例
+		pluginInstance := constructor(node.Attr, node.P2PMod)
+		node.Plugins = append(node.Plugins, pluginInstance)
+
+		utils.LoggerInstance.Info("Created plugin instance: %s from package %s",
+			pluginCfg.Plugin, pluginCfg.Package)
 	}
 
-	// register the messgae process handlers to the p2p module
-	for _, runningMod := range node.RunningMods {
-		runningMod.RegisterHandlers()
+	// 初始化所有插件
+	for _, pluginInstance := range node.Plugins {
+		pluginInstance.Initialize()
 	}
 
 	return node, nil
@@ -52,32 +64,37 @@ func (n *Node) Run() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	n.P2PMod.MsgHandlerMap[message.MsgStop] = func(msg *message.Message) {
-		utils.LoggerInstance.Info("Received stop message...now close the running Mod")
+		utils.LoggerInstance.Info("Received stop message...now closing plugins")
 		cancel()
 	}
 
-	// start to receive the message
+	// 启动消息监听
 	n.P2PMod.StartListen()
 
-	// start to run custom modules
-	for _, runningMod := range n.RunningMods {
+	// 启动所有插件
+	for _, pluginInstance := range n.Plugins {
 		wg.Add(1)
-		go runningMod.Run(ctx, &wg)
+		go pluginInstance.Run(ctx, &wg)
 	}
 
-	// ctrl+c to stop all the goroutines
+	// Ctrl+C 停止所有协程
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
-	case <-ctx.Done(): // invoke by other nodes, for example, the client
-
+	case <-ctx.Done():
 	case <-sigChan:
-		utils.LoggerInstance.Info("Node stopped by system interrupt...now close the running Mod")
+		utils.LoggerInstance.Info("Node stopped by system interrupt...now closing plugins")
 		cancel()
 	}
 
-	// wait for all the runningMods to stop
+	// 等待所有插件停止
 	wg.Wait()
+
+	// 清理插件资源
+	for _, pluginInstance := range n.Plugins {
+		pluginInstance.Cleanup()
+	}
+
 	utils.LoggerInstance.Info("Node stopped...")
 }

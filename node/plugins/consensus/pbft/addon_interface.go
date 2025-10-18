@@ -1,4 +1,4 @@
-package pbft
+package main
 
 import (
 	"BlockChainSimulator/message"
@@ -20,7 +20,7 @@ const (
 	TBDAddon = "TBD"
 )
 
-var addonRegistry = make(map[string]func(pbftMod *PbftCosensusMod) PbftAddon)
+var addonRegistry = make(map[string]func(pbftMod *PbftCosensusPlugin) PbftAddon)
 
 func init() {
 	addonRegistry[TestAddon] = NewSimplePbftCosensusAddon
@@ -30,7 +30,7 @@ func init() {
 	addonRegistry[TBDAddon] = NewTBDPbftCosensusAddon
 }
 
-func NewPbftAddon(addonType string, pbftMod *PbftCosensusMod) (PbftAddon, error) {
+func NewPbftAddon(addonType string, pbftMod *PbftCosensusPlugin) (PbftAddon, error) {
 	// check if the addon type exists, if so, return a new instance of the addon
 	if constructor, exists := addonRegistry[addonType]; exists {
 		return constructor(pbftMod), nil

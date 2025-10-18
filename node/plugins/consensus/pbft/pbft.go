@@ -1,13 +1,13 @@
 // This file contains the handler functions for the pbft consensus module
 // in this implementation, msg.Content is the request, req.Content is the block
-package pbft
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/utils"
 	"context"
 	"log"
@@ -19,10 +19,9 @@ import (
 
 func init() { rand.Seed(uint64(time.Now().UnixNano())) }
 
-// implement the ConsensusMod interface
-var _ runningModInterface.RunningMod = &PbftCosensusMod{}
+var _ plugininterface.Plugin = &PbftCosensusPlugin{}
 
-type PbftCosensusMod struct {
+type PbftCosensusPlugin struct {
 	// vars from the belonging node
 	nodeAttr *nodeattr.NodeAttr // the attribute of the belonging node
 	p2pMod   *p2p.P2PMod        // the p2p network module of the belonging node
@@ -44,9 +43,9 @@ type PbftCosensusMod struct {
 	addonMod PbftAddon // PbftAddon is an pointer-type interface
 }
 
-// Creates a new PbftCosensusMod with the config.ConsensusMethod, err is not nil if the config.ConsensusMethod is not supported
-func NewPbftCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	pbftMod := new(PbftCosensusMod)
+// Creates a new PbftCosensusPlugin with the config.ConsensusMethod, err is not nil if the config.ConsensusMethod is not supported
+func NewPbftCosensusPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	pbftMod := new(PbftCosensusPlugin)
 	pbftMod.nodeAttr = attr
 	pbftMod.p2pMod = p2p
 
@@ -70,7 +69,7 @@ func NewPbftCosensusMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInte
 }
 
 // At present, only the view node will receive the Propose message
-func (pbftmod *PbftCosensusMod) handlePropose(msg *message.Message) {
+func (pbftmod *PbftCosensusPlugin) handlePropose(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle propose")
 
 	// decode the request from the message
@@ -95,7 +94,7 @@ func (pbftmod *PbftCosensusMod) handlePropose(msg *message.Message) {
 }
 
 // PrePrepare means the node has received the propose message and broadcast the request to other nodes, the nodes need to check the request legality
-func (pbftmod *PbftCosensusMod) handlePrePrepare(msg *message.Message) {
+func (pbftmod *PbftCosensusPlugin) handlePrePrepare(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle pre-prepare")
 
 	// decode the request from the message
@@ -142,7 +141,7 @@ func (pbftmod *PbftCosensusMod) handlePrePrepare(msg *message.Message) {
 }
 
 // Prepare means some node think the request is legal and broadcast the prepare message to other nodess
-func (pbftmod *PbftCosensusMod) handlePrepare(msg *message.Message) {
+func (pbftmod *PbftCosensusPlugin) handlePrepare(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle prepare")
 
 	// decode the request from the message
@@ -206,7 +205,7 @@ func (pbftmod *PbftCosensusMod) handlePrepare(msg *message.Message) {
 }
 
 // Commit means a node received enough prepare messages (usually 2/3) and broadcast the commit message to other nodes
-func (pbftmod *PbftCosensusMod) handleCommit(msg *message.Message) {
+func (pbftmod *PbftCosensusPlugin) handleCommit(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle commit")
 
 	// decode the request from the message
@@ -266,16 +265,8 @@ func (pbftmod *PbftCosensusMod) handleCommit(msg *message.Message) {
 	// }
 }
 
-// call in node.go according to the current implementation, you can also call this function in the New() function
-func (pbftmod *PbftCosensusMod) RegisterHandlers() {
-	pbftmod.p2pMod.MsgHandlerMap[message.MsgPropose] = pbftmod.handlePropose
-	pbftmod.p2pMod.MsgHandlerMap[message.MsgPrePrepare] = pbftmod.handlePrePrepare
-	pbftmod.p2pMod.MsgHandlerMap[message.MsgPrepare] = pbftmod.handlePrepare
-	pbftmod.p2pMod.MsgHandlerMap[message.MsgCommit] = pbftmod.handleCommit
-}
-
 // get the ip addresses of the nodes in the same shard
-func (pbftmod *PbftCosensusMod) getNeighbours(shardIPs map[int]string) []string {
+func (pbftmod *PbftCosensusPlugin) getNeighbours(shardIPs map[int]string) []string {
 	neighbours := make([]string, 0)
 	for _, ip := range shardIPs {
 		if ip == pbftmod.nodeAttr.Ipaddr {
@@ -286,9 +277,20 @@ func (pbftmod *PbftCosensusMod) getNeighbours(shardIPs map[int]string) []string 
 	return neighbours
 }
 
+// call in node.go according to the current implementation, you can also call this function in the New() function
+func (pbftmod *PbftCosensusPlugin) Initialize() {
+	pbftmod.p2pMod.MsgHandlerMap[message.MsgPropose] = pbftmod.handlePropose
+	pbftmod.p2pMod.MsgHandlerMap[message.MsgPrePrepare] = pbftmod.handlePrePrepare
+	pbftmod.p2pMod.MsgHandlerMap[message.MsgPrepare] = pbftmod.handlePrepare
+	pbftmod.p2pMod.MsgHandlerMap[message.MsgCommit] = pbftmod.handleCommit
+}
+
+func (pbftmod *PbftCosensusPlugin) Cleanup() {
+}
+
 // Run starts the intra-shard consensus.
 // This function will work in the condition that the request is from other shards instead of the current shard
-func (pbftmod *PbftCosensusMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (pbftmod *PbftCosensusPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	if pbftmod.nodeAttr.Nid != pbftmod.view {
 		utils.LoggerInstance.Info("This node is not the view node, do not need to run intra-shard consensus Mod")

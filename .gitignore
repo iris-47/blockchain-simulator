@@ -12,6 +12,7 @@ BlockChainSimulator
 
 /*.sum
 /log
+/plugins_bin
 /blockchain_data
 /result
 
@@ -22,3 +23,5 @@ BlockChainSimulator
 *.pem
 
 draft*
+
+prompt.md

@@ -21,9 +21,10 @@ var (
 	ViewNodeId  = 0         // the nodeID of the initial view nodes
 	ClientShard = 0xfffffff // the shardID of the client
 
-	StoragePath = "./blockchain_data/" // the path to store the blockchain data
-	ResultPath  = "./result/"          // measurement data result output path
-	LogPath     = "./log/"             // log output path
+	StoragePath        = "./blockchain_data/" // the path to store the blockchain data
+	ResultPath         = "./result/"          // measurement data result output path
+	LogPath            = "./log/"             // log output path
+	PluginPath  string = "plugins_bin"        // the path to store the compiled plugin binaries
 
 	StartPort  = 28800                                                           // the start port of the IPnodeTable, in local environment
 	ClientAddr = "127.0.0.1:23333"                                               // client ip address

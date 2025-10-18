@@ -1,0 +1,87 @@
+{
+  "protocols": {
+    "Test": {
+      "description": "测试协议",
+      "client": [
+        {
+          "plugin": "TestAuxiliary",
+          "package": "auxiliary"
+        }
+      ],
+      "normal": [
+        {
+          "plugin": "TestAuxiliary",
+          "package": "auxiliary"
+        }
+      ],
+      "view": [
+        {
+          "plugin": "TestAuxiliary",
+          "package": "auxiliary"
+        }
+      ]
+    },
+    "Simple": {
+      "description": "模拟PBFT共识协议",
+      "client": [
+        {
+          "plugin": "StartSystem",
+          "package": "control"
+        },
+        {
+          "plugin": "StopSystem",
+          "package": "control"
+        },
+        {
+          "plugin": "SendMimicAccountTxs",
+          "package": "sendTxs"
+        }
+      ],
+      "normal": [
+        {
+          "plugin": "PbftConsensus",
+          "package": "pbft"
+        }
+      ],
+      "view": [
+        {
+          "plugin": "PbftConsensus",
+          "package": "pbft"
+        },
+        {
+          "plugin": "ProposeBlock",
+          "package": "propose"
+        }
+      ]
+    },
+    "RBE": {
+      "description": "RBE共识协议",
+      "client": [
+        {
+          "plugin": "StartSystem",
+          "package": "control"
+        },
+        {
+          "plugin": "StopSystem",
+          "package": "control"
+        },
+        {
+          "plugin": "RBEMonitoring",
+          "package": "rbe"
+        }
+      ],
+      "normal": [
+        {
+          "plugin": "RBEIdentityAuth",
+          "package": "rbe"
+        }
+      ],
+      "view": [
+        {
+          "plugin": "RBEIdentityAuth",
+          "package": "rbe"
+        }
+      ]
+    }
+  }
+}

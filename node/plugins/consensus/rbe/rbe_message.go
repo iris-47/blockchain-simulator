@@ -1,4 +1,4 @@
-package rbe
+package main
 
 import "BlockChainSimulator/message"
 

@@ -1,4 +1,4 @@
-package pbft
+package main
 
 import (
 	"BlockChainSimulator/message"
@@ -29,18 +29,18 @@ func NewRequestInfo(req message.Request) *RequestInfo {
 	}
 }
 
-func (pbftmod *PbftCosensusMod) getCurrentRound() int {
+func (pbftmod *PbftCosensusPlugin) getCurrentRound() int {
 	pbftmod.roundLock.RLock()
 	defer pbftmod.roundLock.RUnlock()
 	return pbftmod.currentRound
 }
-func (pbftmod *PbftCosensusMod) IncCurrentRound() {
+func (pbftmod *PbftCosensusPlugin) IncCurrentRound() {
 	pbftmod.roundLock.Lock()
 	defer pbftmod.roundLock.Unlock()
 	pbftmod.currentRound++
 }
 
-func (pbftmod *PbftCosensusMod) isCommitBroadcasted(digestStr string) bool {
+func (pbftmod *PbftCosensusPlugin) isCommitBroadcasted(digestStr string) bool {
 	pbftmod.requestPoolLock.RLock()
 	defer pbftmod.requestPoolLock.RUnlock()
 
@@ -51,7 +51,7 @@ func (pbftmod *PbftCosensusMod) isCommitBroadcasted(digestStr string) bool {
 	return pbftmod.requestPool[digestStr].isCommitBroadcast
 }
 
-func (pbftmod *PbftCosensusMod) setCommitBroadcasted(digestStr string) bool {
+func (pbftmod *PbftCosensusPlugin) setCommitBroadcasted(digestStr string) bool {
 	pbftmod.requestPoolLock.Lock()
 	defer pbftmod.requestPoolLock.Unlock()
 
@@ -64,7 +64,7 @@ func (pbftmod *PbftCosensusMod) setCommitBroadcasted(digestStr string) bool {
 	return true
 }
 
-func (pbftmod *PbftCosensusMod) isReplySent(digestStr string) bool {
+func (pbftmod *PbftCosensusPlugin) isReplySent(digestStr string) bool {
 	pbftmod.requestPoolLock.RLock()
 	defer pbftmod.requestPoolLock.RUnlock()
 
@@ -75,7 +75,7 @@ func (pbftmod *PbftCosensusMod) isReplySent(digestStr string) bool {
 	return pbftmod.requestPool[digestStr].isReply
 }
 
-func (pbftmod *PbftCosensusMod) setReplySent(digestStr string) bool {
+func (pbftmod *PbftCosensusPlugin) setReplySent(digestStr string) bool {
 	pbftmod.requestPoolLock.Lock()
 	defer pbftmod.requestPoolLock.Unlock()
 

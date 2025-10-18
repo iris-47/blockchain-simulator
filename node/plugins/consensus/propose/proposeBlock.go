@@ -1,11 +1,11 @@
-package consensusMod
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
 	"context"
@@ -15,10 +15,10 @@ import (
 
 // Q: there will be a lot of duplicated code, how to avoid it?
 
-var _ runningModInterface.RunningMod = &ProposeBlockAuxiliaryMod{}
+var _ plugininterface.Plugin = &ProposeBlockPlugin{}
 
 // this mod will receive the txs from client, pack them to a block and propose to the shard
-type ProposeBlockAuxiliaryMod struct {
+type ProposeBlockPlugin struct {
 	nodeAttr *nodeattr.NodeAttr // the attribute of the belonging node
 	p2pMod   *p2p.P2PMod        // the p2p network module of the belonging node
 
@@ -26,8 +26,8 @@ type ProposeBlockAuxiliaryMod struct {
 }
 
 // this mod will receive the txs from client, pack them to a block and propose to the shard
-func NewProposeBlockAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	pbm := new(ProposeBlockAuxiliaryMod)
+func NewProposeBlockPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	pbm := new(ProposeBlockPlugin)
 	pbm.nodeAttr = attr
 	pbm.p2pMod = p2p
 
@@ -36,17 +36,20 @@ func NewProposeBlockAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runni
 	return pbm
 }
 
-func (pbm *ProposeBlockAuxiliaryMod) RegisterHandlers() {
+func (pbm *ProposeBlockPlugin) Initialize() {
 	pbm.p2pMod.RegisterHandler(message.MsgInject, pbm.handleInject)
 }
 
+func (pbm *ProposeBlockPlugin) Cleanup() {
+}
+
 // get the txs from the txPool, pack them to a block and propose to the shard
-func (pbm *ProposeBlockAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (pbm *ProposeBlockPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
-			utils.LoggerInstance.Info("Stop the ProposeBlockAuxiliaryMod")
+			utils.LoggerInstance.Info("Stop the ProposeBlockPlugin")
 			return
 		default:
 			pbm.TryProposeBlock()
@@ -54,7 +57,7 @@ func (pbm *ProposeBlockAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup
 	}
 }
 
-func (pbm *ProposeBlockAuxiliaryMod) TryProposeBlock() {
+func (pbm *ProposeBlockPlugin) TryProposeBlock() {
 	txs := pbm.txPool.GetEnoughTxs(100, 500)
 	if txs != nil {
 		b := pbm.nodeAttr.CurChain.NewBlock(txs)
@@ -72,7 +75,7 @@ func (pbm *ProposeBlockAuxiliaryMod) TryProposeBlock() {
 }
 
 // receive the txs from the client and add them to the txPool
-func (pbm *ProposeBlockAuxiliaryMod) handleInject(msg *message.Message) {
+func (pbm *ProposeBlockPlugin) handleInject(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle inject")
 
 	txs := []structs.Transaction{}

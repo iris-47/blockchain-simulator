@@ -1,40 +1,45 @@
-package clientMod
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"math/big"
 	"sync"
 	"time"
 )
 
-var _ runningModInterface.RunningMod = &sendMimicAccountTxsMod{}
+var _ plugininterface.Plugin = &SendMimicContractTxsPlugin{}
 
 // just for test use, this mod sends Txs every 3 seconds
-type sendMimicAccountTxsMod struct {
+type SendMimicContractTxsPlugin struct {
 	nodeAttr *nodeattr.NodeAttr
 	p2pMod   *p2p.P2PMod
 }
 
 // just for test use, this mod sends Txs every 3 seconds
-func NewsendMimicAccountTxsMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	smatm := new(sendMimicAccountTxsMod)
-	smatm.nodeAttr = attr
-	smatm.p2pMod = p2p
+func NewSendMimicContractTxsPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	smctm := new(SendMimicContractTxsPlugin)
+	smctm.nodeAttr = attr
+	smctm.p2pMod = p2p
 
-	return smatm
+	return smctm
 }
 
-func (smatm *sendMimicAccountTxsMod) RegisterHandlers() {
+func (smctm *SendMimicContractTxsPlugin) Initialize() {
 }
 
-func (smatm *sendMimicAccountTxsMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (smctm *SendMimicContractTxsPlugin) Cleanup() {
+}
+
+func (smctm *SendMimicContractTxsPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(time.Second)
@@ -52,7 +57,7 @@ func (smatm *sendMimicAccountTxsMod) Run(ctx context.Context, wg *sync.WaitGroup
 			return
 		case <-ticker.C:
 			utils.LoggerInstance.Debug("Try to send mimic contract txs")
-			txs := generateMimicAccountTxs()
+			txs := generateMimicContractTxs()
 
 			txsToSend := make(map[int][]structs.Transaction) // key: sid, value: txs
 			for _, tx := range txs {
@@ -69,26 +74,54 @@ func (smatm *sendMimicAccountTxsMod) Run(ctx context.Context, wg *sync.WaitGroup
 					MsgType: message.MsgInject,
 					Content: utils.Encode(txs),
 				}
-				utils.LoggerInstance.Debug("send txs to shard %v, len %v", sid, len(txs))
-				smatm.p2pMod.ConnMananger.Send(config.IPMap[sid][0], msg.JsonEncode())
+				smctm.p2pMod.ConnMananger.Send(config.IPMap[sid][0], msg.JsonEncode())
 			}
 		}
 	}
 }
 
-// generate config.TxInjectSpeed of mimic contract
-func generateMimicAccountTxs() []structs.Transaction {
+// generate config.TxInjectSpeed of mimic contract txs
+func generateMimicContractTxs() []structs.Transaction {
+	crossShardRatio := 0.5 // cross shard txs ratio
 	txs := make([]structs.Transaction, 0)
 	for i := 0; i < config.TxInjectSpeed; i++ {
-		tx := structs.NewAccountTransaction(
+		isCrossShard := false
+		if randFloat64() < crossShardRatio {
+			isCrossShard = true
+		}
+
+		tx := structs.NewContractTransaction(
 			randomAddr(),
 			randomAddr(),
 			0,
-			big.NewInt(0),
+			time.Now(),
+			[]byte("code.."),
+			[]string{},
+			isCrossShard,
 		)
 
 		txs = append(txs, tx)
 	}
 
 	return txs
+}
+
+// generate float64 number in [0, 1)
+func randFloat64() float64 {
+	n, err := rand.Int(rand.Reader, big.NewInt(1<<53)) // 53 bits for float64 precision
+	if err != nil {
+		return 0
+	}
+	return float64(n.Int64()) / (1 << 53)
+}
+
+// A random ETH-like address
+func randomAddr() string {
+	address := make([]byte, 20) // address length is 20
+	_, err := rand.Read(address)
+	if err != nil {
+		utils.LoggerInstance.Error("error generating random address")
+	}
+
+	return hex.EncodeToString(address)
 }

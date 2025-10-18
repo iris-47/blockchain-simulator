@@ -1,11 +1,11 @@
-package consensusMod
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
 	"context"
@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
-var _ runningModInterface.RunningMod = &ProposeTxsAuxiliaryMod{}
+var _ plugininterface.Plugin = &ProposeTxsPlugin{}
 
 // this mod will receive the txs from client and propose them to the shard
-type ProposeTxsAuxiliaryMod struct {
+type ProposeTxsPlugin struct {
 	nodeAttr *nodeattr.NodeAttr // the attribute of the belonging node
 	p2pMod   *p2p.P2PMod        // the p2p network module of the belonging node
 
@@ -24,8 +24,8 @@ type ProposeTxsAuxiliaryMod struct {
 }
 
 // this mod will receive the txs from client and propose them to the shard
-func NewProposeTxsAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	sam := new(ProposeTxsAuxiliaryMod)
+func NewProposeTxsPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	sam := new(ProposeTxsPlugin)
 	sam.nodeAttr = attr
 	sam.p2pMod = p2p
 
@@ -34,17 +34,20 @@ func NewProposeTxsAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) running
 	return sam
 }
 
-func (sam *ProposeTxsAuxiliaryMod) RegisterHandlers() {
+func (sam *ProposeTxsPlugin) Initialize() {
 	sam.p2pMod.RegisterHandler(message.MsgInject, sam.handleInject)
 }
 
+func (sam *ProposeTxsPlugin) Cleanup() {
+}
+
 // get the txs from the txPool and propose them to the shard
-func (sam *ProposeTxsAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (sam *ProposeTxsPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
-			utils.LoggerInstance.Info("Stop the ProposeTxsAuxiliaryMod")
+			utils.LoggerInstance.Info("Stop the ProposeTxsPlugin")
 			return
 		default:
 			txs := sam.txPool.GetBatchofTxs()
@@ -65,7 +68,7 @@ func (sam *ProposeTxsAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGroup) 
 }
 
 // receive the txs from the client and add them to the txPool
-func (sam *ProposeTxsAuxiliaryMod) handleInject(msg *message.Message) {
+func (sam *ProposeTxsPlugin) handleInject(msg *message.Message) {
 	utils.LoggerInstance.Debug("handle inject")
 
 	txs := []structs.Transaction{}

@@ -3,6 +3,7 @@ package main
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/node"
+	"BlockChainSimulator/node/pluginloader"
 	"BlockChainSimulator/utils"
 	"fmt"
 
@@ -13,23 +14,24 @@ func main() {
 	args := config.Args{}
 	// <-- Blockchain Config Related -->
 	blockchainFlags := pflag.NewFlagSet("Blockchain Config Related", pflag.ExitOnError)
-	blockchainFlags.IntVarP(&args.NodeID, "nodeID", "n", 0, "id of this node, for example, 0")
-	blockchainFlags.IntVarP(&args.NodeNum, "nodeNum", "N", 4, "indicate how many nodes of each shard are deployed")
-	blockchainFlags.IntVarP(&args.ShardID, "shardID", "s", 0, "id of the shard to which this node belongs, for example, 0")
-	blockchainFlags.IntVarP(&args.ShardNum, "shardNum", "S", 1, "indicate that how many shards are deployed")
-	blockchainFlags.IntVarP(&args.BlockSize, "blockSize", "b", 500, "how many Txs per block")
+	blockchainFlags.IntVarP(&args.NodeID, "nodeID", "n", 0, "id of this node")
+	blockchainFlags.IntVarP(&args.NodeNum, "nodeNum", "N", 4, "nodes per shard")
+	blockchainFlags.IntVarP(&args.ShardID, "shardID", "s", 0, "shard id of this node")
+	blockchainFlags.IntVarP(&args.ShardNum, "shardNum", "S", 1, "total number of shards")
+	blockchainFlags.IntVarP(&args.BlockSize, "blockSize", "b", 500, "Txs per block")
+
 	// <-- Running Config Related -->
 	runningFlags := pflag.NewFlagSet("Running Config Related", pflag.ExitOnError)
 	runningFlags.BoolVarP(&args.IsClient, "isClient", "c", false, "whether this node is a client")
 	runningFlags.BoolVarP(&args.IsDistribute, "isDistribute", "d", false, "whether the environment is distribute or local")
-
 	runningFlags.Float64VarP(&args.MaliciousRatio, "maliciousRatio", "r", 0, "the ratio of malicious nodes in the network")
 	runningFlags.Float64VarP(&args.ResilientRatio, "resilientRatio", "R", 0.5, "the ratio of resilient nodes in the network")
 	runningFlags.BoolVarP(&args.IsMalicious, "isMalicious", "M", false, "whether this node is malicious")
-	runningFlags.StringVarP(&args.ConsensusMethod, "consensusMethod", "m", "Monoxide", "choice fo consensus Method, for example, Monoxide")
-	runningFlags.StringVarP(&args.TxType, "txType", "t", "UTXO", "choice of TxType, for example, UTXO")
-	runningFlags.StringVarP(&args.LogLevel, "logLevel", "l", "INFO", "Set the log level of [DEBUG, INFO, WARN, ERROR]")
+	runningFlags.StringVarP(&args.ConsensusMethod, "consensusMethod", "m", "Simple", "choice of consensus Method")
+	runningFlags.StringVarP(&args.TxType, "txType", "t", "UTXO", "choice of TxType")
+	runningFlags.StringVarP(&args.LogLevel, "logLevel", "l", "INFO", "Set the log level")
 	runningFlags.BoolVarP(&args.ConnetRemoteDemo, "connetRemoteDemo", "C", false, "whether the node is connected to the remote demo")
+
 	// <-- Client Config Related -->
 	clientFlags := pflag.NewFlagSet("Client Config Related", pflag.ExitOnError)
 	clientFlags.IntVarP(&args.TxInjectCount, "txInjectCount", "i", 80000, "how many txs to inject")
@@ -51,12 +53,9 @@ func main() {
 		clientFlags.PrintDefaults()
 	}
 	pflag.Parse()
-
-	config.LoadConfig()      // load config from the config file such as config.json
-	config.InitConfig(&args) // init config from the command line arguments
-
+	config.LoadConfig()
+	config.InitConfig(&args)
 	utils.LoggerInstance, _ = utils.NewLogger(&args, args.LogLevel, true, true)
-
 	pcc := config.ChainConfig{
 		NodeID:    args.NodeID,
 		NodeNum:   args.NodeNum,
@@ -64,36 +63,54 @@ func main() {
 		ShardNum:  args.ShardNum,
 		BlockSize: args.BlockSize,
 	}
-
-	var runningNode *node.Node
-	var err error
-
-	// choose the running mods
-	if _, ok := PredefinedProtocolMods[args.ConsensusMethod]; !ok {
-		utils.LoggerInstance.Error("Method %v is not supported", args.ConsensusMethod)
+	// 加载协议配置
+	protocolsConfig, err := pluginloader.LoadProtocolsConfig("protocols.json")
+	if err != nil {
+		utils.LoggerInstance.Error("Failed to load protocols config: %v", err)
 		return
 	}
-
+	// 检查协议是否存在
+	if _, exists := protocolsConfig.Protocols[args.ConsensusMethod]; !exists {
+		utils.LoggerInstance.Error("Protocol %s not found in config", args.ConsensusMethod)
+		return
+	}
+	// 预加载该协议需要的所有包
+	packages, err := protocolsConfig.GetRequiredPackages(args.ConsensusMethod)
+	if err != nil {
+		utils.LoggerInstance.Error("Failed to get required packages: %v", err)
+		return
+	}
+	loader := pluginloader.GetLoader()
+	if err := loader.LoadPackages(packages, config.PluginPath); err != nil {
+		utils.LoggerInstance.Error("Failed to load plugin packages: %v", err)
+		return
+	}
+	var runningNode *node.Node
+	var pluginConfigs []pluginloader.PluginConfig
+	// 根据节点类型选择插件配置
 	if args.IsClient {
 		utils.LoggerInstance.Debug("This node is a client")
-		runningNode, err = node.NewNode(config.ClientShard, 0, &pcc, PredefinedProtocolMods[args.ConsensusMethod].clientMods)
+		pluginConfigs, err = protocolsConfig.GetPluginsForNode(args.ConsensusMethod, "client")
 	} else if args.NodeID == config.ViewNodeId {
 		utils.LoggerInstance.Debug("This node is a view node")
-		runningNode, err = node.NewNode(args.ShardID, args.NodeID, &pcc, PredefinedProtocolMods[args.ConsensusMethod].viewNodeMods)
+		pluginConfigs, err = protocolsConfig.GetPluginsForNode(args.ConsensusMethod, "view")
 	} else {
 		utils.LoggerInstance.Debug("This node is a normal node")
-		runningNode, err = node.NewNode(args.ShardID, args.NodeID, &pcc, PredefinedProtocolMods[args.ConsensusMethod].nodeMods)
+		pluginConfigs, err = protocolsConfig.GetPluginsForNode(args.ConsensusMethod, "normal")
 	}
-
+	if err != nil {
+		utils.LoggerInstance.Error("Failed to get plugin configs: %v", err)
+		return
+	}
+	// 创建节点
+	runningNode, err = node.NewNode(args.ShardID, args.NodeID, &pcc, pluginConfigs)
 	if err != nil {
 		utils.LoggerInstance.Error("Error creating node: %v", err)
 		return
 	}
-
 	if runningNode == nil {
 		utils.LoggerInstance.Error("runningNode is nil")
 		return
 	}
-
 	runningNode.Run()
 }

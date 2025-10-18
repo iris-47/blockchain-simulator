@@ -1,12 +1,12 @@
 // rbe_monitor.go
-package rbe
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/utils"
 	"context"
 	"fmt"
@@ -14,8 +14,10 @@ import (
 	"time"
 )
 
-// RBEMonitorMod 监控节点模块
-type RBEMonitorMod struct {
+var _ plugininterface.Plugin = &RBEMonitorPlugin{}
+
+// RBEMonitorPlugin 监控节点模块
+type RBEMonitorPlugin struct {
 	nodeAttr *nodeattr.NodeAttr
 	p2pMod   *p2p.P2PMod
 
@@ -32,8 +34,8 @@ type RBEMonitorMod struct {
 	startTime time.Time
 }
 
-func NewRBEMonitorMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	return &RBEMonitorMod{
+func NewRBEMonitorPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	return &RBEMonitorPlugin{
 		nodeAttr:  attr,
 		p2pMod:    p2p,
 		reports:   make(map[string]*MonitorReport),
@@ -41,13 +43,11 @@ func NewRBEMonitorMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterf
 	}
 }
 
-func (mon *RBEMonitorMod) RegisterHandlers() {
+func (mon *RBEMonitorPlugin) Initialize() {
 	mon.p2pMod.RegisterHandler(MsgRBEMonitorReport, mon.handleMonitorReportMsg)
-	utils.LoggerInstance.Info("监控节点 [分片%d, 节点%d] 注册消息处理器完成",
-		mon.nodeAttr.Sid, mon.nodeAttr.Nid)
 }
 
-func (mon *RBEMonitorMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (mon *RBEMonitorPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	utils.LoggerInstance.Info("=== RBE性能监控节点启动 ===")
@@ -82,8 +82,12 @@ func (mon *RBEMonitorMod) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+func (mon *RBEMonitorPlugin) Cleanup() {
+
+}
+
 // queryAllNodes 查询所有节点的统计数据
-func (mon *RBEMonitorMod) queryAllNodes() {
+func (mon *RBEMonitorPlugin) queryAllNodes() {
 	// 遍历所有分片的所有节点
 	for sid, shardNodes := range config.IPMap {
 		for nid, ip := range shardNodes {
@@ -106,7 +110,7 @@ func (mon *RBEMonitorMod) queryAllNodes() {
 }
 
 // handleMonitorReportMsg 处理监控报告消息
-func (mon *RBEMonitorMod) handleMonitorReportMsg(msg *message.Message) {
+func (mon *RBEMonitorPlugin) handleMonitorReportMsg(msg *message.Message) {
 	var report MonitorReport
 	err := utils.Decode(msg.Content, &report)
 	if err != nil {
@@ -123,7 +127,7 @@ func (mon *RBEMonitorMod) handleMonitorReportMsg(msg *message.Message) {
 }
 
 // printSummaryReport 打印汇总报告
-func (mon *RBEMonitorMod) printSummaryReport() {
+func (mon *RBEMonitorPlugin) printSummaryReport() {
 	mon.reportsLock.Lock()
 	defer mon.reportsLock.Unlock()
 	if len(mon.reports) == 0 {
@@ -196,7 +200,7 @@ func (mon *RBEMonitorMod) printSummaryReport() {
 }
 
 // printFinalReport 打印最终报告
-func (mon *RBEMonitorMod) printFinalReport() {
+func (mon *RBEMonitorPlugin) printFinalReport() {
 	utils.LoggerInstance.Info("")
 	utils.LoggerInstance.Info("========== RBE最终性能报告 ==========")
 	mon.printSummaryReport()

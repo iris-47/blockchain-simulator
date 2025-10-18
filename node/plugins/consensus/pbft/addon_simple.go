@@ -1,4 +1,4 @@
-package pbft
+package main
 
 import (
 	"BlockChainSimulator/message"
@@ -8,10 +8,10 @@ var _ PbftAddon = &PbftSimpleAddon{}
 
 // a simple PBFT addon, which implemen
 type PbftSimpleAddon struct {
-	pbftMod *PbftCosensusMod // the belonging pbft module
+	pbftMod *PbftCosensusPlugin // the belonging pbft module
 }
 
-func NewSimplePbftCosensusAddon(pbftMod *PbftCosensusMod) PbftAddon {
+func NewSimplePbftCosensusAddon(pbftMod *PbftCosensusPlugin) PbftAddon {
 	return &PbftSimpleAddon{
 		pbftMod: pbftMod,
 	}

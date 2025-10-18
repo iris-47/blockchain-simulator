@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -112,8 +113,8 @@ func (l *Logger) getCallerInfo(skip int) string {
 }
 
 func str2Level(level string) int {
-	switch level {
-	case "DEBUG":
+	switch strings.ToUpper(level) {
+	case "DEBUG", "DBG":
 		return DEBUG
 	case "INFO":
 		return INFO

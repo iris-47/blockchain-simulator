@@ -1,4 +1,4 @@
-package pbft
+package main
 
 import (
 	"BlockChainSimulator/blockchain"
@@ -16,13 +16,13 @@ var _ PbftAddon = &PbftTBDAddon{}
 
 // implement TBD method
 type PbftTBDAddon struct {
-	pbftMod *PbftCosensusMod // the belonging pbft module
+	pbftMod *PbftCosensusPlugin // the belonging pbft module
 
 	stateUpdateDone bool
 	stateLock       sync.Mutex
 }
 
-func NewTBDPbftCosensusAddon(pbftMod *PbftCosensusMod) PbftAddon {
+func NewTBDPbftCosensusAddon(pbftMod *PbftCosensusPlugin) PbftAddon {
 	return &PbftTBDAddon{
 		pbftMod:         pbftMod,
 		stateUpdateDone: false,

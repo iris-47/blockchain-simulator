@@ -1,12 +1,12 @@
 // rbe_identity_auth_mod.go
-package rbe
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/utils"
 	"context"
 	"crypto/sha256"
@@ -17,9 +17,11 @@ import (
 	"time"
 )
 
+var _ plugininterface.Plugin = &RBEIdentityAuthPlugin{}
+
 // ==================== RBE模块主结构 ====================
 
-type RBEIdentityAuthMod struct {
+type RBEIdentityAuthPlugin struct {
 	nodeAttr *nodeattr.NodeAttr
 	p2pMod   *p2p.P2PMod
 
@@ -59,8 +61,8 @@ type RBEIdentityAuthMod struct {
 
 // ==================== 构造函数 ====================
 
-func NewRBEIdentityAuthMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	mod := &RBEIdentityAuthMod{
+func NewRBEIdentityAuthPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	mod := &RBEIdentityAuthPlugin{
 		nodeAttr:         attr,
 		p2pMod:           p2p,
 		registry:         make(map[string]string),
@@ -85,76 +87,18 @@ func NewRBEIdentityAuthMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModI
 	return mod
 }
 
-// ==================== RBE伪函数实现 ====================
-// RBE 基于 双线性群（Bilinear Groups）与向量承诺（Vector Commitments），标准 Go 语言库中并没有对应实现。
-// 目前可能使用的库有：
-// github.com/cloudflare/bn256 (提供pairing，但非完整RBE）；
-// github.com/fentec-project/bn256 (更通用，但性能较低）；
-// 部分科研实现（通常为C或Python版本）。
-
-// 无现成RBE支持。
-// Setup 生成公共参考字符串
-func Setup() string {
-	data := fmt.Sprintf("crs_%d", time.Now().UnixNano())
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:16])
-}
-
-// Gen 生成密钥对和辅助数据
-func (mod *RBEIdentityAuthMod) Gen() {
-	timestamp := time.Now().UnixNano()
-	baseData := fmt.Sprintf("node_%d_%d_%d", mod.nodeAttr.Sid, mod.nodeAttr.Nid, timestamp)
-
-	// 生成私钥
-	skHash := sha256.Sum256([]byte(baseData + "_sk"))
-	mod.SK = hex.EncodeToString(skHash[:16])
-
-	// 生成公钥
-	pkHash := sha256.Sum256([]byte(baseData + "_pk"))
-	mod.PK = hex.EncodeToString(pkHash[:16])
-
-	// 生成辅助数据
-	xiHash := sha256.Sum256([]byte(baseData + "_xi"))
-	mod.ξ = hex.EncodeToString(xiHash[:16])
-
-	// 生成DID
-	mod.DID = fmt.Sprintf("did_s%d_n%d", mod.nodeAttr.Sid, mod.nodeAttr.Nid)
-
-	utils.LoggerInstance.Info("节点 [分片%d, 节点%d] 生成密钥对，DID: %s",
-		mod.nodeAttr.Sid, mod.nodeAttr.Nid, mod.DID)
-}
-
-// Enc 模拟加密/签名过程
-func Enc(crs, pp, did, m string) string {
-	data := fmt.Sprintf("%s|%s|%s|%s", crs, pp, did, m)
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:])
-}
-
-// Dec 模拟解密/验证过程
-func Dec(sk, lambda, sigma, m string) bool {
-	// 简单验证：检查所有参数非空且sigma长度正确
-	return len(sk) > 0 && len(lambda) > 0 && len(sigma) == 64
-}
-
-// Reg KC执行注册逻辑
-func Reg(crs, pp, did, pk, xi string) string {
-	data := fmt.Sprintf("%s|%s|%s|%s|%s|%d", crs, pp, did, pk, xi, time.Now().UnixNano())
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:])
-}
-
-// Upd 更新开口信息
-func Upd(pp, did string) string {
-	data := fmt.Sprintf("%s|%s|%d", pp, did, time.Now().UnixNano())
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:])
-}
-
 // ==================== 接口实现 ====================
+func (mod *RBEIdentityAuthPlugin) GetMetadata() *plugininterface.PluginMetadata {
+	return &plugininterface.PluginMetadata{
+		Name:        "rbe",
+		Version:     "1.0.0",
+		Description: "基于RBE的身份认证模块",
+		Category:    "consensus",
+	}
+}
 
-// RegisterHandlers 注册消息处理函数
-func (mod *RBEIdentityAuthMod) RegisterHandlers() {
+// Initialize 注册消息处理函数
+func (mod *RBEIdentityAuthPlugin) Initialize() {
 	mod.p2pMod.RegisterHandler(MsgRBERegister, mod.handleRegisterMsg)
 	mod.p2pMod.RegisterHandler(MsgRBERegisterReply, mod.handleRegisterReplyMsg)
 	mod.p2pMod.RegisterHandler(MsgRBESign, mod.handleSignMsg)
@@ -163,13 +107,15 @@ func (mod *RBEIdentityAuthMod) RegisterHandlers() {
 	mod.p2pMod.RegisterHandler(MsgRBECheckDID, mod.handleCheckDIDMsg)
 	mod.p2pMod.RegisterHandler(MsgRBECheckDIDReply, mod.handleCheckDIDReplyMsg)
 	mod.p2pMod.RegisterHandler(MsgRBEMonitorQuery, mod.handleMonitorQueryMsg)
+}
 
-	utils.LoggerInstance.Info("节点 [分片%d, 节点%d] 注册RBE消息处理器完成",
-		mod.nodeAttr.Sid, mod.nodeAttr.Nid)
+// Cleanup 清理资源
+func (mod *RBEIdentityAuthPlugin) Cleanup() {
+	// 目前无特殊资源需要清理
 }
 
 // Run 节点运行主循环
-func (mod *RBEIdentityAuthMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (mod *RBEIdentityAuthPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	utils.LoggerInstance.Info("节点 [分片%d, 节点%d] RBE模块开始运行（KC=%v）",
@@ -227,7 +173,7 @@ func (mod *RBEIdentityAuthMod) Run(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 // runAsKC KC节点运行逻辑
-func (mod *RBEIdentityAuthMod) runAsKC(ctx context.Context) {
+func (mod *RBEIdentityAuthPlugin) runAsKC(ctx context.Context) {
 	// KC节点自己也需要注册
 	mod.registerLock.Lock()
 	mod.Gen()
@@ -262,10 +208,76 @@ func (mod *RBEIdentityAuthMod) runAsKC(ctx context.Context) {
 	}
 }
 
+// ==================== RBE伪函数实现 ====================
+// RBE 基于 双线性群（Bilinear Groups）与向量承诺（Vector Commitments），标准 Go 语言库中并没有对应实现。
+// 目前可能使用的库有：
+// github.com/cloudflare/bn256 (提供pairing，但非完整RBE）；
+// github.com/fentec-project/bn256 (更通用，但性能较低）；
+// 部分科研实现（通常为C或Python版本）。
+
+// 无现成RBE支持。
+// Setup 生成公共参考字符串
+func Setup() string {
+	data := fmt.Sprintf("crs_%d", time.Now().UnixNano())
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:16])
+}
+
+// Gen 生成密钥对和辅助数据
+func (mod *RBEIdentityAuthPlugin) Gen() {
+	timestamp := time.Now().UnixNano()
+	baseData := fmt.Sprintf("node_%d_%d_%d", mod.nodeAttr.Sid, mod.nodeAttr.Nid, timestamp)
+
+	// 生成私钥
+	skHash := sha256.Sum256([]byte(baseData + "_sk"))
+	mod.SK = hex.EncodeToString(skHash[:16])
+
+	// 生成公钥
+	pkHash := sha256.Sum256([]byte(baseData + "_pk"))
+	mod.PK = hex.EncodeToString(pkHash[:16])
+
+	// 生成辅助数据
+	xiHash := sha256.Sum256([]byte(baseData + "_xi"))
+	mod.ξ = hex.EncodeToString(xiHash[:16])
+
+	// 生成DID
+	mod.DID = fmt.Sprintf("did_s%d_n%d", mod.nodeAttr.Sid, mod.nodeAttr.Nid)
+
+	utils.LoggerInstance.Info("节点 [分片%d, 节点%d] 生成密钥对，DID: %s",
+		mod.nodeAttr.Sid, mod.nodeAttr.Nid, mod.DID)
+}
+
+// Enc 模拟加密/签名过程
+func Enc(crs, pp, did, m string) string {
+	data := fmt.Sprintf("%s|%s|%s|%s", crs, pp, did, m)
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
+}
+
+// Dec 模拟解密/验证过程
+func Dec(sk, lambda, sigma, m string) bool {
+	// 简单验证：检查所有参数非空且sigma长度正确
+	return len(sk) > 0 && len(lambda) > 0 && len(sigma) == 64
+}
+
+// Reg KC执行注册逻辑
+func Reg(crs, pp, did, pk, xi string) string {
+	data := fmt.Sprintf("%s|%s|%s|%s|%s|%d", crs, pp, did, pk, xi, time.Now().UnixNano())
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
+}
+
+// Upd 更新开口信息
+func Upd(pp, did string) string {
+	data := fmt.Sprintf("%s|%s|%d", pp, did, time.Now().UnixNano())
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
+}
+
 // ==================== 注册流程 ====================
 
 // registerToKC 向KC发送注册请求
-func (mod *RBEIdentityAuthMod) registerToKC() {
+func (mod *RBEIdentityAuthPlugin) registerToKC() {
 	mod.registerLock.Lock()
 	defer mod.registerLock.Unlock()
 
@@ -296,7 +308,7 @@ func (mod *RBEIdentityAuthMod) registerToKC() {
 }
 
 // handleRegisterMsg KC处理注册请求
-func (mod *RBEIdentityAuthMod) handleRegisterMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleRegisterMsg(msg *message.Message) {
 	if !mod.isKC {
 		return
 	}
@@ -343,7 +355,7 @@ func (mod *RBEIdentityAuthMod) handleRegisterMsg(msg *message.Message) {
 }
 
 // handleRegisterReplyMsg 处理注册响应
-func (mod *RBEIdentityAuthMod) handleRegisterReplyMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleRegisterReplyMsg(msg *message.Message) {
 	var resp RegisterResponse
 	err := utils.Decode(msg.Content, &resp)
 	if err != nil {
@@ -372,7 +384,7 @@ func (mod *RBEIdentityAuthMod) handleRegisterReplyMsg(msg *message.Message) {
 // ==================== 认证流程 ====================
 
 // performRandomAuth 执行随机认证测试
-func (mod *RBEIdentityAuthMod) performRandomAuth() {
+func (mod *RBEIdentityAuthPlugin) performRandomAuth() {
 	// 随机选择分片内的另一个节点
 	shardNodes := config.IPMap[mod.nodeAttr.Sid]
 	nodeCount := len(shardNodes)
@@ -411,7 +423,7 @@ func (mod *RBEIdentityAuthMod) performRandomAuth() {
 }
 
 // handleSignMsg 处理签名请求
-func (mod *RBEIdentityAuthMod) handleSignMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleSignMsg(msg *message.Message) {
 	var signedMsg SignedMessage
 	err := utils.Decode(msg.Content, &signedMsg)
 	if err != nil {
@@ -424,7 +436,7 @@ func (mod *RBEIdentityAuthMod) handleSignMsg(msg *message.Message) {
 }
 
 // handleVerifyMsg 处理验证请求
-func (mod *RBEIdentityAuthMod) handleVerifyMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleVerifyMsg(msg *message.Message) {
 	var req VerifyRequest
 	err := utils.Decode(msg.Content, &req)
 	if err != nil {
@@ -459,7 +471,7 @@ func (mod *RBEIdentityAuthMod) handleVerifyMsg(msg *message.Message) {
 }
 
 // handleCheckDIDMsg KC处理DID检查请求
-func (mod *RBEIdentityAuthMod) handleCheckDIDMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleCheckDIDMsg(msg *message.Message) {
 	if !mod.isKC {
 		return
 	}
@@ -496,7 +508,7 @@ func (mod *RBEIdentityAuthMod) handleCheckDIDMsg(msg *message.Message) {
 }
 
 // handleCheckDIDReplyMsg 处理DID检查响应
-func (mod *RBEIdentityAuthMod) handleCheckDIDReplyMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleCheckDIDReplyMsg(msg *message.Message) {
 	var resp CheckDIDResponse
 	err := utils.Decode(msg.Content, &resp)
 	if err != nil {
@@ -551,7 +563,7 @@ func (mod *RBEIdentityAuthMod) handleCheckDIDReplyMsg(msg *message.Message) {
 }
 
 // handleVerifyReplyMsg 处理验证响应
-func (mod *RBEIdentityAuthMod) handleVerifyReplyMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleVerifyReplyMsg(msg *message.Message) {
 	var resp VerifyResponse
 	err := utils.Decode(msg.Content, &resp)
 	if err != nil {
@@ -568,7 +580,7 @@ func (mod *RBEIdentityAuthMod) handleVerifyReplyMsg(msg *message.Message) {
 // ==================== 统计报告 ====================
 
 // reportStats 报告统计信息
-func (mod *RBEIdentityAuthMod) reportStats() {
+func (mod *RBEIdentityAuthPlugin) reportStats() {
 	mod.metricsLock.Lock()
 	defer mod.metricsLock.Unlock()
 	currentCount := atomic.LoadInt64(&mod.verifyCount)
@@ -590,7 +602,7 @@ func (mod *RBEIdentityAuthMod) reportStats() {
 }
 
 // reportKCStats KC节点报告统计
-func (mod *RBEIdentityAuthMod) reportKCStats() {
+func (mod *RBEIdentityAuthPlugin) reportKCStats() {
 	mod.registryLock.RLock()
 	regCount := len(mod.registry)
 	mod.registryLock.RUnlock()
@@ -604,7 +616,7 @@ func (mod *RBEIdentityAuthMod) reportKCStats() {
 // ==================== 监控功能 ====================
 
 // handleMonitorQueryMsg 处理监控查询消息
-func (mod *RBEIdentityAuthMod) handleMonitorQueryMsg(msg *message.Message) {
+func (mod *RBEIdentityAuthPlugin) handleMonitorQueryMsg(msg *message.Message) {
 	// 获取当前统计数据
 	currentCount := atomic.LoadInt64(&mod.verifyCount)
 	totalCount := atomic.LoadInt64(&mod.totalVerifyCount) // 使用总计数
@@ -654,7 +666,7 @@ func (mod *RBEIdentityAuthMod) handleMonitorQueryMsg(msg *message.Message) {
 }
 
 // GetStats 获取当前统计数据（供外部调用）
-func (mod *RBEIdentityAuthMod) GetStats() (totalCount int64, avgTPS float64, instantTPS float64) {
+func (mod *RBEIdentityAuthPlugin) GetStats() (totalCount int64, avgTPS float64, instantTPS float64) {
 	totalCount = atomic.LoadInt64(&mod.totalVerifyCount)
 	currentCount := atomic.LoadInt64(&mod.verifyCount)
 

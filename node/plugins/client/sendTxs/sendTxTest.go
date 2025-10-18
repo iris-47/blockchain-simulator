@@ -1,11 +1,11 @@
-package clientMod
+package main
 
 import (
 	"BlockChainSimulator/config"
 	"BlockChainSimulator/message"
 	"BlockChainSimulator/node/nodeattr"
 	"BlockChainSimulator/node/p2p"
-	"BlockChainSimulator/node/runningMod/runningModInterface"
+	"BlockChainSimulator/node/plugins/plugininterface"
 	"BlockChainSimulator/structs"
 	"BlockChainSimulator/utils"
 	"context"
@@ -14,10 +14,10 @@ import (
 	"time"
 )
 
-var _ runningModInterface.RunningMod = &sendTxTestMod{}
+var _ plugininterface.Plugin = &SendTxTestPlugin{}
 
 // just for test use, this mod sends Txs every 3 seconds
-type sendTxTestMod struct {
+type SendTxTestPlugin struct {
 	nodeAttr *nodeattr.NodeAttr
 	p2pMod   *p2p.P2PMod
 
@@ -25,8 +25,8 @@ type sendTxTestMod struct {
 }
 
 // just for test use, this mod sends Txs every 3 seconds
-func NewTestAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInterface.RunningMod {
-	sttm := new(sendTxTestMod)
+func NewSendTxTestPlugin(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) plugininterface.Plugin {
+	sttm := new(SendTxTestPlugin)
 	sttm.nodeAttr = attr
 	sttm.p2pMod = p2p
 
@@ -35,11 +35,15 @@ func NewTestAuxiliaryMod(attr *nodeattr.NodeAttr, p2p *p2p.P2PMod) runningModInt
 	return sttm
 }
 
-func (sttm *sendTxTestMod) RegisterHandlers() {
+func (sttm *SendTxTestPlugin) Initialize() {
 
 }
 
-func (sttm *sendTxTestMod) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (sttm *SendTxTestPlugin) Cleanup() {
+
+}
+
+func (sttm *SendTxTestPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(3 * time.Second)
@@ -76,7 +80,7 @@ func (sttm *sendTxTestMod) Run(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-ctx.Done():
-			utils.LoggerInstance.Info("Stop the sendTxTestMod")
+			utils.LoggerInstance.Info("Stop the SendTxTestPlugin")
 			return
 		case <-ticker.C:
 			for i := 0; i < config.ShardNum; i++ {
