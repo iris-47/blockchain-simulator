@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"plugin"
-	"reflect"
 	"sync"
 )
 
@@ -58,25 +57,6 @@ func (pl *PluginLoader) LoadPackage(packageName string, pluginDir string) error 
 	symPackage, err := p.Lookup("PluginPackage")
 	if err != nil {
 		return fmt.Errorf("plugin %s does not export PluginPackage: %v", packageName, err)
-	}
-
-	// 调试信息
-	fmt.Printf("符号类型: %T\n", symPackage)
-	fmt.Printf("符号值: %+v\n", symPackage)
-
-	// 尝试反射来检查实际类型
-	v := reflect.ValueOf(symPackage)
-	fmt.Printf("反射类型: %v\n", v.Type())
-
-	// 检查是否是指针类型
-	if v.Kind() == reflect.Ptr {
-		elem := v.Elem()
-		fmt.Printf("指针指向的类型: %v\n", elem.Type())
-	}
-
-	// 尝试断言为 interface{} 然后检查
-	if obj, ok := symPackage.(interface{}); ok {
-		fmt.Printf("作为interface{}的类型: %T\n", obj)
 	}
 
 	// 类型断言

@@ -241,7 +241,7 @@ func (mod *RBEIdentityAuthPlugin) Gen() {
 	mod.ξ = hex.EncodeToString(xiHash[:16])
 
 	// 生成DID
-	mod.DID = fmt.Sprintf("did_s%d_n%d", mod.nodeAttr.Sid, mod.nodeAttr.Nid)
+	mod.DID = fmt.Sprintf("did:pubkey:%s", mod.PK)
 
 	utils.LoggerInstance.Info("节点 [分片%d, 节点%d] 生成密钥对，DID: %s",
 		mod.nodeAttr.Sid, mod.nodeAttr.Nid, mod.DID)
