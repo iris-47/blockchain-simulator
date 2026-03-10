@@ -17,19 +17,21 @@
 ## 使用方法
 
 ### 添加自定义协议
-1. 在 `node/runningMod` 目录下实现您的节点行为模块
-2. 在 `protocols.go` 中注册新的协议组合
-3. 详细指南请参考 [node/runningMod/README_zh.md](node/runningMod/README_zh.md)
+1. 在 `node/plugins` 目录下实现您的节点行为模块插件。
+2. 每个插件应为一个文件夹，且必须包含导出结构体PluginPackage。
+3. 在 `protocols.json` 中注册新的协议组合
+4. 详细指南请参考 [node/README_zh.md](node/README_zh.md)
 
 ### 配置文件
-所有配置参数可通过命令行或配置文件`config/config.go`设置。
+所有配置参数可通过命令行或配置文件`config.json`设置。
 
 ## 快速开始
 
 ### 1. 编译项目
 ```bash
-go build
+make
 ```
+使用`make help`获取帮助，当然你也可以不用MakeFile而是使用go build来编译，或者写个适合自己的编译脚本。
 > **注意**：本项目依赖 `github.com/herumi/bls-go-binary/bls` 库，建议编译后运行以获得最佳性能
 ### 2. 启动节点
 ```bash
@@ -37,11 +39,9 @@ go build
 ./BlockChainSimulator -c -m "TBB"
 ```
 ### 3. 系统控制
-客户端节点启动后将自动初始化整个网络
+如果加载了StartSystem和StopSystem插件，客户端节点启动后将自动初始化整个网络，这是个很好用的公用插件，请使用它们。
 
-使用 `Ctrl+C` 关闭客户端，并关闭区块链网络
-
-意外情况使用 `./kill.sh` 强行关闭所有节点
+意外情况使用 `pkill命令` 强行关闭所有节点（或者其它相似命令）
 
 区块链数据保存在 blockchain_data/
 

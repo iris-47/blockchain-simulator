@@ -1,60 +1,65 @@
 # Blockchain Simulation Platform
 
-[中文版README](README_zh.md)
+[Chinese version](README_zh.md)
 
 ---
 
 ## Project Overview
 
-I am a graduate student, and this is a blockchain simulation platform built for the experiments in my thesis. The platform is designed to provide a modular and extensible environment for blockchain research and development. It currently supports the following transaction models:
+I am a graduate student, and this is a blockchain simulation platform I built for my thesis experiments. It aims to provide a modular and easily extensible experimental environment for blockchain research. The platform supports the following transaction models:
 
-- **UTXO Model**
-- **Account Model**
-- **Custom Smart Contract Transactions**
+- **UTXO model**
+- **Account model**
+- **Custom smart contract transactions**
 
-The platform's modular design allows easy swapping and integration of various consensus protocols, making it flexible for blockchain experiments and testing.
+With its modular design, the platform facilitates the replacement and integration of different consensus protocols, flexibly supporting various blockchain experiments and tests.
 
 ## Usage
 
 ### Adding Custom Protocols
-1. Implement node modules in `node/runningMod`
-2. Register new protocol combinations in `protocols.go`
-3. See [node/runningMod/README.md](node/runningMod/README_zh.md) for development guide
+1. Implement your node behavior module plugins in the `node/plugins` directory.
+2. Each plugin should be a folder and must include an exported struct `PluginPackage`.
+3. Register new protocol combinations in `protocols.json`.
+4. For detailed instructions, refer to [node/README_zh.md](node/README_zh.md).
+
+### Configuration
+All configuration parameters can be set via command line or the `config.json` configuration file.
 
 ## Quick Start
 
-### 1. Build Project
+### 1. Build the Project
 ```bash
-go build
+make
 ```
-> **Note**: Requires `github.com/herumi/bls-go-binary/bls`, recommended to build before running
-### 2. 启动节点
+Use `make help` for assistance. Of course, you can also compile using `go build` or write your own build script instead of using the Makefile.
+> **Note**: This project depends on the `github.com/herumi/bls-go-binary/bls` library. It is recommended to run after compilation for optimal performance.
+
+### 2. Start a Node
 ```bash
-# Start client node (controller)
+# Start the client
 ./BlockChainSimulator -c -m "TBB"
 ```
+
 ### 3. System Control
-Client node will bootstrap the network
+If the `StartSystem` and `StopSystem` plugins are loaded, the client node will automatically initialize the entire network after startup. These are useful common plugins—please use them.
 
-Use `Ctrl+C` for shutdown client and automatically shutdown the network
+In case of unexpected situations, use the `pkill` command to forcibly terminate all nodes (or similar commands).
 
-In case of unexpected failures, forcefully terminate all nodes using `./kill.sh`
+Blockchain data is stored in `blockchain_data/`.
 
-Blockchain data: `blockchain_data/`
+Logs are stored in `log/`.
 
-Log files: `log/`
+## Project Features
 
-## Key Features
-
-- **Support for Multiple Transaction Models**: Includes UTXO, Account, and custom smart contract transactions.
-- **Modular Design**: Consensus protocols and transaction processing modules are easily replaceable and extensible, catering to various experimental needs.
-- **Extensibility**: Researchers can effortlessly integrate new functionalities and consensus protocols for testing and optimization.
+- **Support for Multiple Transaction Models**: Includes UTXO model, Account model, and custom smart contract transactions.
+- **Modular Design**: Consensus protocols and transaction processing modules can be easily replaced and extended to meet different experimental needs.
+- **Extensibility**: Researchers can easily integrate new functionalities and consensus protocols for experimentation and optimization.
 
 ## Current Status
 
-The platform is still under development, with features being actively improved. I welcome collaboration and discussions with anyone interested in blockchain technology!
+The platform is currently under development, with features continuously being improved. Feedback and discussions from those interested in blockchain technology are welcome!
 
-## Contact Information
+## Contact
 
-If you have any questions or suggestions, feel free to reach out:
+If you have any questions or suggestions, feel free to contact me:
 - **Email**: []

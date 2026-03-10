@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: blockchain-simulator
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Junjie
+    family-names: Peng
+    email: 346045359@qq.com
+    affiliation: >-
+      University of Electronic Science and Technology of
+      China
+repository-code: 'https://github.com/iris-47/blockchain-simulator'
