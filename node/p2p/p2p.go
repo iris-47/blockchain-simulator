@@ -33,8 +33,19 @@ func (p2p *P2PMod) RegisterHandler(msgType message.MessageType, handler message.
 
 // start listening on the p2p's listen address
 func (p2p *P2PMod) StartListen() {
-	utils.LoggerInstance.Info("Start listening on %v\n", p2p.listenAddr)
-	ln, err := net.Listen("tcp", p2p.listenAddr)
+	_, port, err := net.SplitHostPort(p2p.listenAddr)
+	if err != nil {
+		utils.LoggerInstance.Error("Error parsing listen address: %v\n", err)
+		return
+	}
+
+	if port == "" {
+		utils.LoggerInstance.Error("Port is required in listen address: %v\n", p2p.listenAddr)
+	}
+	utils.LoggerInstance.Info("Start listening on port %v\n", port)
+	listenAddr := net.JoinHostPort("0.0.0.0", port)
+
+	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		utils.LoggerInstance.Error("Error listening: %v", err)
 		return
