@@ -78,6 +78,12 @@ func (sdm *StartSystemPlugin) startNode(ShardID int, NodeID int) {
 		" -l " + config.LogLevel + " -t " + config.TxType +
 		" -r " + strconv.FormatFloat(config.MaliciousRatio, 'f', -3, 64) +
 		" -R " + strconv.FormatFloat(config.ResilientRatio, 'f', -3, 64)
+
+	// if distributed, add -d flag
+	if config.IsDistributed {
+		remoteCmd += " -d "
+	}
+
 	// malicious node
 	if float64(ShardID*config.NodeNum+NodeID) > (1-config.MaliciousRatio)*float64(config.ShardNum*config.NodeNum) {
 		remoteCmd += " -M "
