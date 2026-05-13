@@ -73,7 +73,7 @@ func (smatm *SendMimicAccountTxsPlugin) Run(ctx context.Context, wg *sync.WaitGr
 					Content: utils.Encode(txs),
 				}
 				utils.LoggerInstance.Debug("send txs to shard %v, len %v", sid, len(txs))
-				smatm.p2pMod.ConnMananger.Send(config.IPMap[sid][0], msg.JsonEncode())
+				smatm.p2pMod.ConnManager.Send(config.IPMap[sid][0], msg.JsonEncode())
 			}
 		}
 	}

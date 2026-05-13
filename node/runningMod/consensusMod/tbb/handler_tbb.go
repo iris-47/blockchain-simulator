@@ -169,7 +169,7 @@ func (tbbMod *TBBCosensusMod) handleQueryMsg(msg *message.Message) {
 	}
 
 	// send the reply message to the client
-	tbbMod.p2pMod.ConnMananger.Send(ipaddr, repMsg.JsonEncode())
+	tbbMod.p2pMod.ConnManager.Send(ipaddr, repMsg.JsonEncode())
 }
 
 func (tbbMod *TBBCosensusMod) RegisterHandlers() {

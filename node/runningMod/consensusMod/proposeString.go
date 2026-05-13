@@ -90,9 +90,9 @@ func (sam *ProposeStringAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGrou
 				Content: utils.Encode(startTime),
 			}
 			utils.LoggerInstance.Info("Broadcast the init message")
-			sam.p2pMod.ConnMananger.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), initMsg.JsonEncode())
+			sam.p2pMod.ConnManager.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), initMsg.JsonEncode())
 			// alse send to client to sync time
-			sam.p2pMod.ConnMananger.Send(config.ClientAddr, initMsg.JsonEncode())
+			sam.p2pMod.ConnManager.Send(config.ClientAddr, initMsg.JsonEncode())
 
 			sam.p2pMod.MsgHandlerMap[message.MsgInit](&initMsg)
 
@@ -114,14 +114,14 @@ func (sam *ProposeStringAuxiliaryMod) Run(ctx context.Context, wg *sync.WaitGrou
 					Content: utils.Encode(message.NewRequestWithSignature(sam.nodeAttr.Sid, message.ReqVerifyString, []byte("bad"), sig)),
 				}
 				utils.LoggerInstance.Info("Broadcast the propose message")
-				// sam.p2pMod.ConnMananger.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), proposeMsg.JsonEncode())
+				// sam.p2pMod.ConnManager.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), proposeMsg.JsonEncode())
 				sam.p2pMod.MsgHandlerMap[message.MsgPropose](&proposeMsg)
 
-				sam.p2pMod.ConnMananger.Send(config.IPMap[0][1], badproposeMsg.JsonEncode())
-				sam.p2pMod.ConnMananger.Send(config.IPMap[0][2], badproposeMsg.JsonEncode())
+				sam.p2pMod.ConnManager.Send(config.IPMap[0][1], badproposeMsg.JsonEncode())
+				sam.p2pMod.ConnManager.Send(config.IPMap[0][2], badproposeMsg.JsonEncode())
 			} else {
 				utils.LoggerInstance.Info("Broadcast the propose message")
-				sam.p2pMod.ConnMananger.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), proposeMsg.JsonEncode())
+				sam.p2pMod.ConnManager.Broadcast(sam.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], sam.nodeAttr.Ipaddr), proposeMsg.JsonEncode())
 				sam.p2pMod.MsgHandlerMap[message.MsgPropose](&proposeMsg)
 			}
 			// wait for the consensus to be done

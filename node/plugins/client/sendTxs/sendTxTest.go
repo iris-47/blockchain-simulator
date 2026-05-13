@@ -86,7 +86,7 @@ func (sttm *SendTxTestPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 			for i := 0; i < config.ShardNum; i++ {
 				for j := 0; j < config.NodeNum; j++ {
 					utils.LoggerInstance.Debug("send txs to %d-%d: %s", i, j, config.IPMap[i][j])
-					sttm.p2pMod.ConnMananger.Send(config.IPMap[i][j], msg.JsonEncode())
+					sttm.p2pMod.ConnManager.Send(config.IPMap[i][j], msg.JsonEncode())
 				}
 			}
 		}

@@ -54,7 +54,7 @@ func (qm *queryMod) handleInitMsg(msg *message.Message) {
 		}
 		// send to the view node
 		utils.LoggerInstance.Info("Send the query message to the view node")
-		qm.p2pMod.ConnMananger.Send(config.IPMap[0][0], queryMsg.JsonEncode())
+		qm.p2pMod.ConnManager.Send(config.IPMap[0][0], queryMsg.JsonEncode())
 	}()
 }
 

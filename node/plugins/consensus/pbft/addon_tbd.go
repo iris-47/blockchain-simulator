@@ -99,7 +99,7 @@ func (addon *PbftTBDAddon) HandleCommitAddon(req *message.Request) bool {
 		}
 
 		utils.LoggerInstance.Info("Send the reply message back to the client")
-		addon.pbftMod.p2pMod.ConnMananger.Send(config.ClientAddr, replaymsg.JsonEncode())
+		addon.pbftMod.p2pMod.ConnManager.Send(config.ClientAddr, replaymsg.JsonEncode())
 	}
 
 	return true

@@ -302,7 +302,7 @@ func (mod *RBEIdentityAuthPlugin) registerToKC() {
 		Content: utils.Encode(req),
 	}
 
-	mod.p2pMod.ConnMananger.Send(kcIP, msg.JsonEncode())
+	mod.p2pMod.ConnManager.Send(kcIP, msg.JsonEncode())
 	utils.LoggerInstance.Info("节点 [分片%d, 节点%d] 发送注册请求到KC，DID: %s",
 		mod.nodeAttr.Sid, mod.nodeAttr.Nid, mod.DID)
 }
@@ -348,7 +348,7 @@ func (mod *RBEIdentityAuthPlugin) handleRegisterMsg(msg *message.Message) {
 	}
 
 	neighbors := utils.GetNeighbours(config.IPMap[mod.nodeAttr.Sid], mod.nodeAttr.Ipaddr)
-	mod.p2pMod.ConnMananger.Broadcast(mod.nodeAttr.Ipaddr, neighbors, respMsg.JsonEncode())
+	mod.p2pMod.ConnManager.Broadcast(mod.nodeAttr.Ipaddr, neighbors, respMsg.JsonEncode())
 
 	utils.LoggerInstance.Info("KC节点 [分片%d, 节点%d] 完成注册，广播并上链，DID: %s，已注册节点数: %d",
 		mod.nodeAttr.Sid, mod.nodeAttr.Nid, req.DID, regCount)
@@ -419,7 +419,7 @@ func (mod *RBEIdentityAuthPlugin) performRandomAuth() {
 		Content: utils.Encode(verifyReq),
 	}
 
-	mod.p2pMod.ConnMananger.Send(targetIP, msg.JsonEncode())
+	mod.p2pMod.ConnManager.Send(targetIP, msg.JsonEncode())
 }
 
 // handleSignMsg 处理签名请求
@@ -467,7 +467,7 @@ func (mod *RBEIdentityAuthPlugin) handleVerifyMsg(msg *message.Message) {
 		Content: utils.Encode(checkReq),
 	}
 
-	mod.p2pMod.ConnMananger.Send(kcIP, checkMsg.JsonEncode())
+	mod.p2pMod.ConnManager.Send(kcIP, checkMsg.JsonEncode())
 }
 
 // handleCheckDIDMsg KC处理DID检查请求
@@ -504,7 +504,7 @@ func (mod *RBEIdentityAuthPlugin) handleCheckDIDMsg(msg *message.Message) {
 	}
 
 	neighbors := utils.GetNeighbours(config.IPMap[mod.nodeAttr.Sid], mod.nodeAttr.Ipaddr)
-	mod.p2pMod.ConnMananger.Broadcast(mod.nodeAttr.Ipaddr, neighbors, respMsg.JsonEncode())
+	mod.p2pMod.ConnManager.Broadcast(mod.nodeAttr.Ipaddr, neighbors, respMsg.JsonEncode())
 }
 
 // handleCheckDIDReplyMsg 处理DID检查响应
@@ -660,7 +660,7 @@ func (mod *RBEIdentityAuthPlugin) handleMonitorQueryMsg(msg *message.Message) {
 		Content: utils.Encode(report),
 	}
 
-	mod.p2pMod.ConnMananger.Send(queryIP, reportMsg.JsonEncode())
+	mod.p2pMod.ConnManager.Send(queryIP, reportMsg.JsonEncode())
 	utils.LoggerInstance.Debug("节点 [分片%d, 节点%d] 发送监控报告",
 		mod.nodeAttr.Sid, mod.nodeAttr.Nid)
 }

@@ -135,7 +135,7 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleInitMsg(msg *message.Message) {
 		}
 		_1dbbMod.BAproposeMap[string(sigListContent.Input)].Add(*sigListContent.SigList[0])
 		utils.LoggerInstance.Info("Broadcast the start forward message of BADS*")
-		_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
+		_1dbbMod.p2pMod.ConnManager.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
 	}()
 
 	// wait until f + 6 round to final commit
@@ -199,7 +199,7 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleProposeMsg(msg *message.Message) {
 				Content: utils.Encode(req),
 			}
 			utils.LoggerInstance.Info("Broadcast the forward message of 1Δ-BB*")
-			_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
+			_1dbbMod.p2pMod.ConnManager.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
 		}
 
 		voteTimer := time.NewTimer(time.Duration(config.TickInterval) * time.Millisecond)
@@ -223,7 +223,7 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleProposeMsg(msg *message.Message) {
 				}
 				_1dbbMod.voteMap[string(voteContent.Content)].Add(*sig)
 				utils.LoggerInstance.Info("Broadcast the vote message")
-				_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), voteMsg.JsonEncode())
+				_1dbbMod.p2pMod.ConnManager.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), voteMsg.JsonEncode())
 			}
 		}()
 	} else {
@@ -301,7 +301,7 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleVoteMsg(msg *message.Message) {
 					Content: utils.Encode(qc),
 				}
 				utils.LoggerInstance.Info("Broadcast the qc message")
-				_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), qcMsg.JsonEncode())
+				_1dbbMod.p2pMod.ConnManager.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), qcMsg.JsonEncode())
 			}
 		}
 	} else {
@@ -367,7 +367,7 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleForward2Msg(msg *message.Message) 
 						}),
 					}
 					utils.LoggerInstance.Info("Broadcast the forward message of BADS* with aggSig")
-					_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), BAForwardMsg.JsonEncode())
+					_1dbbMod.p2pMod.ConnManager.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), BAForwardMsg.JsonEncode())
 				}()
 			}
 		} else {
@@ -403,7 +403,7 @@ func (_1dbbMod *_1Delta_BBConsensusMod) HandleForward2Msg(msg *message.Message) 
 					MsgType: message.MsgForward2,
 					Content: utils.Encode(sigListContent),
 				}
-				_1dbbMod.p2pMod.ConnMananger.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), BAForwardMsg.JsonEncode())
+				_1dbbMod.p2pMod.ConnManager.Broadcast(_1dbbMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], _1dbbMod.nodeAttr.Ipaddr), BAForwardMsg.JsonEncode())
 				utils.LoggerInstance.Info("Broadcast the forward message of BADS* with own signature")
 			}
 		}

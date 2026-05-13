@@ -142,5 +142,5 @@ func (qtm *queryTBBMod) sendQueryOnTimeout(queryTimer *time.Timer) {
 		Content: utils.Encode(qtm.nodeAttr.Ipaddr),
 	}
 	utils.LoggerInstance.Info("Send the query message to the view node")
-	qtm.p2pMod.ConnMananger.Send(config.IPMap[0][0], queryMsg.JsonEncode())
+	qtm.p2pMod.ConnManager.Send(config.IPMap[0][0], queryMsg.JsonEncode())
 }

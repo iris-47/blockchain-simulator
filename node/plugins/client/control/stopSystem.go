@@ -43,7 +43,7 @@ func (ssam *StopSystemPlugin) Run(ctx context.Context, wg *sync.WaitGroup) {
 			msg := message.Message{
 				MsgType: message.MsgStop,
 			}
-			ssam.p2pMod.ConnMananger.Send(config.IPMap[i][j], msg.JsonEncode())
+			ssam.p2pMod.ConnManager.Send(config.IPMap[i][j], msg.JsonEncode())
 		}
 	}
 }

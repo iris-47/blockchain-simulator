@@ -136,7 +136,7 @@ func (dsMod *DSCosensusMod) HandleProposeMsg(msg *message.Message) {
 			MsgType: message.MsgForward,
 			Content: utils.Encode(sigListContent),
 		}
-		dsMod.p2pMod.ConnMananger.Broadcast(dsMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], dsMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
+		dsMod.p2pMod.ConnManager.Broadcast(dsMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], dsMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
 		return
 	}
 }
@@ -194,7 +194,7 @@ func (dsMod *DSCosensusMod) HandleForwardMsg(msg *message.Message) {
 			Content: utils.Encode(sigListContent),
 		}
 
-		dsMod.p2pMod.ConnMananger.Broadcast(dsMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], dsMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
+		dsMod.p2pMod.ConnManager.Broadcast(dsMod.nodeAttr.Ipaddr, utils.GetNeighbours(config.IPMap[0], dsMod.nodeAttr.Ipaddr), forwardMsg.JsonEncode())
 		utils.LoggerInstance.Info("Broadcast the forward message")
 	}
 }
@@ -213,7 +213,7 @@ func (dsMod *DSCosensusMod) handleQueryMsg(msg *message.Message) {
 		Content: utils.Encode(dsMod.CommitValue),
 	}
 
-	dsMod.p2pMod.ConnMananger.Send(ip, replyMsg.JsonEncode())
+	dsMod.p2pMod.ConnManager.Send(ip, replyMsg.JsonEncode())
 }
 
 func (dsMod *DSCosensusMod) RegisterHandlers() {

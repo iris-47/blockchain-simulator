@@ -136,7 +136,7 @@ func (pbftmod *PbftCosensusPlugin) handlePrePrepare(msg *message.Message) {
 		MsgType: message.MsgPrepare,
 		Content: utils.Encode(prepareMsg),
 	}
-	pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), pmsg.JsonEncode())
+	pbftmod.p2pMod.ConnManager.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), pmsg.JsonEncode())
 	utils.LoggerInstance.Info("Broadcast the prepare message for round %d", round)
 }
 
@@ -199,7 +199,7 @@ func (pbftmod *PbftCosensusPlugin) handlePrepare(msg *message.Message) {
 				MsgType: message.MsgCommit,
 				Content: utils.Encode(commitMsg),
 			}
-			pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), cmsg.JsonEncode())
+			pbftmod.p2pMod.ConnManager.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), cmsg.JsonEncode())
 		}
 	}
 }
@@ -321,7 +321,7 @@ func (pbftmod *PbftCosensusPlugin) Run(ctx context.Context, wg *sync.WaitGroup) 
 				MsgType: message.MsgPrePrepare,
 				Content: utils.Encode(pbftMsg),
 			}
-			pbftmod.p2pMod.ConnMananger.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), ppmsg.JsonEncode())
+			pbftmod.p2pMod.ConnManager.Broadcast(pbftmod.nodeAttr.Ipaddr, pbftmod.getNeighbours(config.IPMap[req.ShardId]), ppmsg.JsonEncode())
 			utils.LoggerInstance.Info("Broadcast the pre-prepare message")
 			go pbftmod.p2pMod.MsgHandlerMap[message.MsgPrePrepare](&ppmsg)
 

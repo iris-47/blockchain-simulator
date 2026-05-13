@@ -102,7 +102,7 @@ func (mon *RBEMonitorPlugin) queryAllNodes() {
 				Content: utils.Encode(mon.nodeAttr.Ipaddr),
 			}
 
-			mon.p2pMod.ConnMananger.Send(ip, queryMsg.JsonEncode())
+			mon.p2pMod.ConnManager.Send(ip, queryMsg.JsonEncode())
 		}
 	}
 

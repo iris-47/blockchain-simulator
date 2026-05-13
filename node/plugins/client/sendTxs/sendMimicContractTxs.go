@@ -74,7 +74,7 @@ func (smctm *SendMimicContractTxsPlugin) Run(ctx context.Context, wg *sync.WaitG
 					MsgType: message.MsgInject,
 					Content: utils.Encode(txs),
 				}
-				smctm.p2pMod.ConnMananger.Send(config.IPMap[sid][0], msg.JsonEncode())
+				smctm.p2pMod.ConnManager.Send(config.IPMap[sid][0], msg.JsonEncode())
 			}
 		}
 	}
