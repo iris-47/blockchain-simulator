@@ -23,6 +23,7 @@ type ProtocolsConfig struct {
 }
 
 // LoadProtocolsConfig 加载协议配置文件
+// TODO: 考虑修改为TOML或YAML格式以增强可读性，并拆分为多个文件以便管理。json格式读起来太长了。
 func LoadProtocolsConfig(configPath string) (*ProtocolsConfig, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {

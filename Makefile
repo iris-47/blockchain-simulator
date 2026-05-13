@@ -123,6 +123,7 @@ clean:
 	@echo "$(COLOR_GREEN)✓ Clean completed$(COLOR_RESET)"
 
 # 增量编译（只编译修改过的插件）
+# TODO: 目前仅支持按文件夹修改时间戳判断，当插件有更复杂的项目结构时则会失效，需要改进。
 incremental:
 	@echo "$(COLOR_BLUE)Incremental build...$(COLOR_RESET)"
 	@for pkg_path in $(ALL_PACKAGES); do \

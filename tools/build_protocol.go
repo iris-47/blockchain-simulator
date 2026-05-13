@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type PluginConfig struct {
@@ -106,6 +107,15 @@ func buildPackage(pkgName string) error {
 	// 编译
 	outputPath := filepath.Join("plugins_bin", pkgName+".so")
 	fmt.Printf("Building %s from %s...\n", outputPath, pkgPath)
+
+	// TODO: 解决项目路径带来的强制查找mod文件的问题，目前可以通过编译/*.go或者修改为相对路径两种方式来规避，但很不优雅。
+	if !filepath.IsAbs(outputPath) && !strings.HasPrefix(outputPath, "./") {
+		outputPath = "./" + outputPath
+	}
+
+	if !filepath.IsAbs(pkgPath) && !strings.HasPrefix(pkgPath, "./") {
+		pkgPath = "./" + pkgPath
+	}
 
 	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", outputPath, pkgPath)
 	cmd.Stdout = os.Stdout
