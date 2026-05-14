@@ -72,12 +72,8 @@ func (m *TPSMonitor) Snapshot(height int64) STCMetrics {
 	cur := m.currentTPS
 	avg := m.averageTPS
 	if time.Now().Before(m.virtualTPSUntil) {
-		if cur < m.virtualTPSFloor {
-			cur = m.virtualTPSFloor
-		}
-		if avg < m.virtualTPSFloor {
-			avg = m.virtualTPSFloor
-		}
+		cur = m.applyVirtualFloor(cur)
+		avg = m.applyVirtualFloor(avg)
 	}
 
 	delay := 0.0
@@ -92,4 +88,11 @@ func (m *TPSMonitor) Snapshot(height int64) STCMetrics {
 		CommittedTxs:  m.totalCommitted,
 		CurrentHeight: height,
 	}
+}
+
+func (m *TPSMonitor) applyVirtualFloor(v float64) float64 {
+	if v < m.virtualTPSFloor {
+		return m.virtualTPSFloor
+	}
+	return v
 }

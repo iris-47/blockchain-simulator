@@ -29,6 +29,8 @@ type httpResult struct {
 
 var reqCounter uint64
 
+const defaultMetricsQueryTimeout = 1200 * time.Millisecond
+
 func (c *STCClientPlugin) setupRoutes() {}
 
 func (c *STCClientPlugin) routes() http.Handler {
@@ -133,7 +135,7 @@ func (c *STCClientPlugin) handleSendTx(w http.ResponseWriter, r *http.Request) {
 		c.writeJSON(w, http.StatusMethodNotAllowed, httpResult{OK: false, Error: "method not allowed"})
 		return
 	}
-	tx := makeSyntheticTx(time.Now().UnixNano(), "manual")
+	tx := createSyntheticTransaction(time.Now().UnixNano(), "manual")
 	msg := message.Message{Sender: c.nodeAttr.Ipaddr, MsgType: message.MsgInject, Content: utils.Encode([]structs.Transaction{tx})}
 	for sid, nodes := range config.IPMap {
 		if sid == config.ClientShard {
@@ -203,7 +205,7 @@ func (c *STCClientPlugin) runThroughputTest(tps int, durationSec int, csvPath st
 			if len(rows) > 0 {
 				payload = rows[idx%int64(len(rows))]
 			}
-			txs = append(txs, makeSyntheticTx(int64(seed), payload))
+			txs = append(txs, createSyntheticTransaction(int64(seed), payload))
 			idx++
 		}
 		msg := message.Message{Sender: c.nodeAttr.Ipaddr, MsgType: message.MsgInject, Content: utils.Encode(txs)}
@@ -239,7 +241,7 @@ func (c *STCClientPlugin) readCSVRows(path string) []string {
 	return rows
 }
 
-func makeSyntheticTx(seed int64, payload string) structs.Transaction {
+func createSyntheticTransaction(seed int64, payload string) structs.Transaction {
 	if config.TxType == structs.UTXOTransactionType {
 		tx := &structs.UTXOTransaction{
 			TxId:       []byte(fmt.Sprintf("%d-%s", seed, payload)),
@@ -482,7 +484,7 @@ func (c *STCClientPlugin) pollMetricsAllNodes() {
 	for sid := 0; sid < config.ShardNum; sid++ {
 		for nid := 0; nid < config.NodeNum; nid++ {
 			go func(s, n int) {
-				rep, err := c.queryNode(s, n, STCQuery{Action: "metrics"}, 1200*time.Millisecond)
+				rep, err := c.queryNode(s, n, STCQuery{Action: "metrics"}, defaultMetricsQueryTimeout)
 				if err == nil {
 					key := fmt.Sprintf("%d-%d", rep.ShardID, rep.NodeID)
 					c.cacheMu.Lock()

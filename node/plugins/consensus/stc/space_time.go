@@ -27,7 +27,8 @@ func (v *SpaceTimeValidator) Validate(env SpaceTimeEnvelope) bool {
 
 	key := fmt.Sprintf("%d-%d", env.ShardID, env.NodeID)
 	now := time.Now().Unix()
-	if delta := now - env.Timestamp; delta > int64(v.allowedSkew.Seconds()) || delta < -int64(v.allowedSkew.Seconds()) {
+	skewSec := int64(v.allowedSkew.Seconds())
+	if delta := now - env.Timestamp; delta > skewSec || delta < -skewSec {
 		v.logFn("STC_ANOMALY type=time shard=%d node=%d msgTs=%d localTs=%d", env.ShardID, env.NodeID, env.Timestamp, now)
 		return false
 	}
