@@ -310,7 +310,7 @@ func (c *STCClientPlugin) startNodeBySSH(shardID int, nodeID int) {
 	if config.IsDistributed {
 		remoteCmd += " -d "
 	}
-	if float64(shardID*config.NodeNum+nodeID) > (1-config.MaliciousRatio)*float64(config.ShardNum*config.NodeNum) {
+	if shouldNodeBeMalicious(shardID, nodeID) {
 		remoteCmd += " -M "
 	}
 	if config.ConnectRemoteDemo {
@@ -322,4 +322,8 @@ func (c *STCClientPlugin) startNodeBySSH(shardID int, nodeID int) {
 	if err := cmd.Start(); err != nil {
 		utils.LoggerInstance.Error("Error starting node %d in shard %d on %s: %v", nodeID, shardID, ip, err)
 	}
+}
+
+func shouldNodeBeMalicious(shardID, nodeID int) bool {
+	return float64(shardID*config.NodeNum+nodeID) > (1-config.MaliciousRatio)*float64(config.ShardNum*config.NodeNum)
 }

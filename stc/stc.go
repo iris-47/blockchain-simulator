@@ -17,6 +17,8 @@ import (
 
 var _ plugininterface.Plugin = &STCPlugin{}
 
+const forgedTimestampOffset = 10 * time.Minute
+
 type STCPlugin struct {
 	nodeAttr *nodeattr.NodeAttr
 	p2pMod   *p2p.P2PMod
@@ -191,7 +193,7 @@ func (p *STCPlugin) makeEnvelope() STCEnvelope {
 	}
 	p.mu.Lock()
 	if p.forgeNext {
-		env.Timestamp = time.Now().Add(10 * time.Minute).UnixNano()
+		env.Timestamp = time.Now().Add(forgedTimestampOffset).UnixNano()
 		if p.forgeLocation != "" {
 			env.Location = p.forgeLocation
 		} else {

@@ -47,7 +47,7 @@ func (m *TPSMonitor) Snapshot(shardID, nodeID int, pending int, latestHeight int
 	}
 	avgLatencyMs := 0.0
 	if m.latencyCount > 0 {
-		avgLatencyMs = float64(m.totalLatencyNs) / float64(m.latencyCount) / float64(time.Millisecond)
+		avgLatencyMs = float64(m.totalLatencyNs/int64(time.Millisecond)) / float64(m.latencyCount)
 	}
 	m.windowCommitted = 0
 	m.lastWindow = now
