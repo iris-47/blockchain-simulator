@@ -82,6 +82,35 @@
           "package": "rbe"
         }
       ]
+    },
+    "STC": {
+      "description": "轻量级时空共识测试协议",
+      "client": [
+        {
+          "plugin": "StartSystem",
+          "package": "control"
+        },
+        {
+          "plugin": "StopSystem",
+          "package": "control"
+        },
+        {
+          "plugin": "STCClient",
+          "package": "stc"
+        }
+      ],
+      "normal": [
+        {
+          "plugin": "STC",
+          "package": "stc"
+        }
+      ],
+      "view": [
+        {
+          "plugin": "STC",
+          "package": "stc"
+        }
+      ]
     }
   }
 }

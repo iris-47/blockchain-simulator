@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STC Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>STC Dashboard</h1>
+    <button id="refreshBtn">Refresh</button>
+    <button id="startLoadBtn">Start 100k TPS Test</button>
+  </header>
+  <section>
+    <h2>Node Status</h2>
+    <pre id="status"></pre>
+  </section>
+  <section>
+    <h2>Metrics</h2>
+    <pre id="metrics"></pre>
+  </section>
+  <section>
+    <h2>Operations</h2>
+    <button id="sendTxBtn">Send One Tx</button>
+    <button id="forgeBtn">Forge Next Space-Time (0-0)</button>
+  </section>
+  <script src="/static/app.js"></script>
+</body>
+</html>
